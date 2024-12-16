@@ -1,0 +1,477 @@
+---
+title: 'Trabalho Prático 3: Comparação de Configurações do Algoritmo DE'
+author: "José Joaquim de Andrade Neto, Matheus Paiva Loures, Raphael Anderson Da Silva"
+date: "16 de Dezembro de 2024"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
+
+```{r setup, include=FALSE}
+# Função para garantir a instalação de pacotes
+pacotes_necessarios <- c("dplyr", "ggplot2", "pwr", "readr", "effectsize", "effsize", "knitr","tidyr", "multcomp", "this.path", "car","ExpDE","smoof","parallel")
+
+for (pacote in pacotes_necessarios) {
+  if (!requireNamespace(pacote, quietly = TRUE)) {
+    install.packages(pacote, repos = "http://cran.us.r-project.org")
+  }
+  library(pacote, character.only = TRUE)
+}
+
+# Configuração dos chunks do knitr
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Descrição do Problema
+
+Este estudo de caso investiga o desempenho de duas configurações do algoritmo de Evolução Diferencial (DE) na resolução de problemas de otimização baseados na função de Rosenbrock, com dimensões variando de 2 a 150. O objetivo é avaliar a eficiência e a robustez das configurações testadas em diferentes escalas de complexidade do problema.
+
+1. **Configurações Testadas:**
+   - **Configuração 1:** `recombination_lbga` e `mutation_rand` com fator de escala `f = 4.5`.
+   - **Configuração 2:** `recombination_blxAlphaBeta` (α = 0.1, β = 0.4) e `mutation_rand` com fator de escala `f = 3`.
+
+2. **Problema de Otimização:** A função de Rosenbrock, amplamente utilizada como benchmark, gerada com o pacote `smoof`.
+
+3. **Parâmetros do Algoritmo:**
+   - **Tamanho da População:** `popsize = 5 * dim` (proporcional à dimensão do problema).
+   - **Critérios de Parada:** Avaliações máximas `maxevals = 5000 * dim` e iterações máximas `maxiter = 100 * dim`.
+
+4. **Análise de Resultados:** Os desempenhos médios das configurações foram comparados em diferentes dimensões utilizando métodos estatísticos, a fim de identificar diferenças significativas e inferir a melhor configuração para cenários variados.
+
+Este estudo visa contribuir para a compreensão das implicações práticas das escolhas de recombinação e mutação no algoritmo DE, considerando a escalabilidade em problemas de otimização.
+
+
+# Metodologia
+
+## Teste Esploratorio
+
+```{r}
+
+# Definir a função de Rosenbrock
+dim <- 16  # Dimensão do problema
+fn <- function(X) {
+  if (!is.matrix(X)) X <- matrix(X, nrow = 1)  # Garantir que X seja uma matriz
+  apply(X, MARGIN = 1, FUN = smoof::makeRosenbrockFunction(dimensions = dim))
+}
+
+# Configurações
+mutpars1 <- list(name = "mutation_rand", f = 4.5)
+recpars1 <- list(name = "recombination_lbga")
+
+mutpars2 <- list(name = "mutation_rand", f = 3)
+recpars2 <- list(name = "recombination_blxAlphaBeta", alpha = 0.1, beta = 0.4)
+
+# Parâmetros do problema
+popsize <- 5 * dim
+probpars <- list(name = "fn", xmin = rep(-5, dim), xmax = rep(10, dim))
+selpars <- list(name = "selection_standard")
+stopcrit <- list(names = "stop_maxeval", maxevals = 5000 * dim)
+
+# Execução Config 1
+resultados_config1 <- ExpDE(
+  mutpars = mutpars1, recpars = recpars1, popsize = popsize,
+  selpars = selpars, stopcrit = stopcrit, probpars = probpars
+)
+
+# Execução Config 2
+resultados_config2 <- ExpDE(
+  mutpars = mutpars2, recpars = recpars2, popsize = popsize,
+  selpars = selpars, stopcrit = stopcrit, probpars = probpars
+)
+
+# Verificar os resultados
+print(resultados_config1$Fbest)
+print(resultados_config2$Fbest)
+```
+
+Os resultados obtidos indicam que a primeira configuração do algoritmo, composta pela recombinação recombination_lbga e mutação mutation_rand com fator 4.5, pode apresentar um desempenho significativamente melhor em relação à segunda configuração, que utilizou a recombinação recombination_blxAlphaBeta e mutação mutation_rand com fator 3. Esse indicativo é evidente pelos valores da função objetivo, com a primeira configuração atingindo um valor final consideravelmente inferior ao resultado obtido pela segunda, ressaltando sua maior eficácia na minimização da função de Rosenbrock no cenário analisado.
+
+
+### Execução do Algoritmo para Diversas Dimensões
+
+
+```{r}
+dim_range <- 2:150
+csv_file <- "resultados_dimensoes_corrigido.csv"
+
+if (!file.exists(csv_file)) {
+  results_list <- list()
+  for (dimesion in dim_range) {
+    # Definir a função de Rosenbrock
+    fn <- function(X) {
+      if (!is.matrix(X)) X <- matrix(X, nrow = 1)  # Garantir que X seja uma matriz
+      apply(X, MARGIN = 1, FUN = smoof::makeRosenbrockFunction(dimensions = dimesion))
+    }
+    
+    # Configurações
+    mutpars1 <- list(name = "mutation_rand", f = 4.5)
+    recpars1 <- list(name = "recombination_lbga")
+    
+    mutpars2 <- list(name = "mutation_rand", f = 3)
+    recpars2 <- list(name = "recombination_blxAlphaBeta", alpha = 0.1, beta = 0.4)
+    
+    # Parâmetros do problema
+    popsize <- 5 * dimesion
+    probpars <- list(name = "fn", xmin = rep(-5, dimesion), xmax = rep(10, dimesion))
+    selpars <- list(name = "selection_standard")
+    stopcrit <- list(names = "stop_maxeval", maxevals = 5000 * dimesion)
+    
+    # Execução Config 1
+    resultados_config1 <- ExpDE(
+      mutpars = mutpars1, recpars = recpars1, popsize = popsize,
+      selpars = selpars, stopcrit = stopcrit, probpars = probpars
+    )
+    
+    # Execução Config 2
+    resultados_config2 <- ExpDE(
+      mutpars = mutpars2, recpars = recpars2, popsize = popsize,
+      selpars = selpars, stopcrit = stopcrit, probpars = probpars
+    )
+    
+    # Verificar os resultados
+    print(resultados_config1$Fbest)
+    print(resultados_config2$Fbest)
+    
+    results_list[[length(results_list) + 1]] <- data.frame(
+      Dimension = dimesion,
+      Best_Config1 = resultados_config1$Fbest,
+      Best_Config2 = resultados_config2$Fbest
+    )
+    
+  }
+  # Combinar todos os resultados e salvar em CSV
+  results_df <- do.call(rbind, results_list)
+  write.csv(results_df, csv_file, row.names = FALSE)
+}
+
+results <- read.csv(csv_file)
+head(results)
+```
+
+
+### Visualização dos Resultados
+
+
+Criar um gráficos para observar tendências nas duas configurações ao longo das dimensões do problema.
+
+```{r}
+
+# Gráfico de linha comparando os desempenhos
+ggplot(results, aes(x = Dimension)) +
+  geom_line(aes(y = Best_Config1, color = "Configuração 1")) +
+  geom_line(aes(y = Best_Config2, color = "Configuração 2")) +
+  labs(title = "Desempenho das Configurações ao Longo das Dimensões",
+       x = "Dimensão",
+       y = "Melhor Resultado (Fbest)",
+       color = "Configuração") +
+  theme_minimal()
+```
+Observa-se que, de maneira geral, a Configuração 1 (recombination_lbga e mutation_rand com fator 4.5) apresenta melhores resultados em comparação com a Configuração 2 (recombination_blxAlphaBeta e mutation_rand com fator 3) em todas as dimensões avaliadas. O desempenho das duas configurações degrada progressivamente com o aumento da dimensão, o que era esperado devido à maior complexidade do problema.
+
+
+```{r}
+# Adicionar novas colunas ao DataFrame
+adicionar_colunas <- function(data) {
+  # Calcular a média das colunas Best_Config1 e Best_Config2
+  data$Mean_Result <- rowMeans(data[, c("Best_Config1", "Best_Config2")])
+  
+  # Calcular os resíduos para cada configuração
+  data$Residual_Config1 <- data$Best_Config1 - data$Mean_Result
+  data$Residual_Config2 <- data$Best_Config2 - data$Mean_Result
+  
+  return(data)
+}
+
+# Carregar os resultados existentes
+results <- read.csv(csv_file)
+
+# Aplicar a função para adicionar novas colunas
+results <- adicionar_colunas(results)
+head(results)
+```
+```{r}
+ggplot(results, aes(x = Dimension)) +
+  geom_line(aes(y = Mean_Result, color = "Média")) +
+  labs(
+    title = "Desempenho das Configurações com Média e Resíduos ao Longo das Dimensões",
+    x = "Dimensão",
+    y = "Resultado (Fbest, Média ou Resíduo)",
+    color = "Legenda"
+  ) +
+  theme_minimal()
+```
+
+A análise do gráfico apresentado demonstra que a média dos resultados dos algoritmos aumenta proporcionalmente ao número de dimensões do problema, indicando uma dependência direta entre o desempenho do algoritmo e a complexidade dimensional da função otimizada. Essa relação reflete a escalabilidade dos algoritmos avaliados, já que o aumento da dimensão torna a tarefa de encontrar soluções ótimas mais desafiadora, elevando os valores médios da função objetivo.
+
+Para determinar qual algoritmo possui um desempenho superior, é essencial considerar a diferença entre as médias das configurações testadas. Apenas ao verificar essa diferença é possível avaliar de maneira conclusiva a eficácia relativa de cada algoritmo, pois a média reflete o desempenho médio em todos os testes realizados. Sem essa análise comparativa das médias, qualquer inferência sobre a superioridade de uma configuração seria inadequada e sujeita a vieses, ignorando o contexto da variabilidade dos resultados.
+
+
+```{r}
+ggplot(results, aes(x = Dimension)) +
+  geom_line(aes(y = Residual_Config1, color = "Resíduo Configuração 1")) +
+  geom_line(aes(y = Residual_Config2, color = "Resíduo Configuração 2")) +
+  labs(
+    title = "Desempenho das Configurações com Média e Resíduos ao Longo das Dimensões",
+    x = "Dimensão",
+    y = "Resultado (Fbest, Média ou Resíduo)",
+    color = "Legenda"
+  ) +
+  theme_minimal()
+```
+
+
+A análise da evolução dos resíduos apresentados no gráfico revela diferenças consistentes entre as configurações ao longo das dimensões. Observa-se que os resíduos da Configuração 1 apresentam valores predominantemente negativos, enquanto os da Configuração 2 são majoritariamente positivos. Isso indica que, em média, a Configuração 1 obteve resultados melhores (mais próximos ao valor mínimo da função objetivo) em comparação com a Configuração 2. 
+
+
+## Cálculo do Tamanho Amostral
+```{r}
+ pwr.t.test(d = 0.5, sig.level = 0.05, power = 0.8, type = "paired")
+
+```
+
+O cálculo do tamanho amostral indica que, para realizar um teste t pareado com uma diferença de efeito (d) de 0,5, um nível de significância de 5% (sig.level = 0,05) e um poder estatístico de 80% (power = 0,8), seriam necessárias 33,37 observações pareadas. Como o número de pares deve ser inteiro, é adequado arredondar para 34 pares. Esse resultado assegura que o teste t terá uma probabilidade de 80% de detectar um efeito de tamanho moderado (d = 0,5), caso ele exista, minimizando tanto o risco de erro tipo I (falso positivo) quanto o risco de erro tipo II (falso negativo).
+
+## Execução Paralela do Experimento
+
+Nesse momento é realizado os experimentos para as duas configurações do algoritmo de Evolução Diferencial (DE) para diferentes dimensões de problemas de otimização, armazenar os resultados em um arquivo CSV e paralelizar o processamento para maior eficiência. Inicialmente, ele verifica se o arquivo de resultados já existe; caso contrário, cria um novo arquivo e prepara um cabeçalho detalhado. Um cluster paralelo é configurado para processar múltiplas dimensões simultaneamente, realizando 30 execuções para cada configuração por dimensão. Os resultados são salvos incrementalmente no arquivo CSV, incluindo os valores individuais das execuções, as médias por configuração e a média geral. Dimensões que apresentarem erros durante o processamento são registradas para análise posterior. Este método eficiente garante a reprodutibilidade, escalabilidade e organização dos dados. 
+
+```{r}
+library(parallel)
+
+# Inicializar a lista para armazenar dimensões com erros
+error_dimensions <- list()
+
+csv_file <- "resultados_dimensoes_corrigido_completo_v2.csv"
+
+# Criar o arquivo CSV com cabeçalho, se ele não existir
+if (!file.exists(csv_file)) {
+  n <- 30
+  dim_Total <- 2:150
+  # Definir semente para garantir reprodutibilidade
+  set.seed(123)
+  dim_range <- sort(sample(dim_Total, size = 34, replace = FALSE), decreasing = FALSE)
+  print(dim_range)
+  
+  # Estruturar o cabeçalho completo
+  colunas_config1 <- paste0("Config1_Run_", 1:n)   # Colunas para a Configuração 1
+  colunas_config2 <- paste0("Config2_Run_", 1:n)   # Colunas para a Configuração 2
+  colunas_finais <- c("Mean_Config1", "Mean_Config2", "Mean_General")  # Médias
+  colunas_totais <- c("Dimension", colunas_config1, colunas_config2, colunas_finais)
+  
+  write.csv(data.frame(matrix(ncol = length(colunas_totais), nrow = 0, dimnames = list(NULL, colunas_totais))),
+            csv_file, row.names = FALSE)
+  
+  # Criar o cluster uma vez
+  n_cores <- max(1, detectCores() - 2)  # Usar quase todos os núcleos disponíveis
+  cl <- makeCluster(n_cores)
+  on.exit(stopCluster(cl))  # Garantir que o cluster seja fechado no final
+  
+  # Lista para armazenar dimensões com erros
+  error_dimensions <- list()
+  
+  for (dimension in dim_range) {
+    print(paste("Processando dimensão:", dimension))
+    
+    tryCatch({
+      # Definir a função de Rosenbrock
+      fn <- function(X) {
+        if (!is.matrix(X)) X <- matrix(X, nrow = 1)
+        apply(X, MARGIN = 1, FUN = smoof::makeRosenbrockFunction(dimensions = dimension))
+      }
+      
+      # Configurações
+      mutpars1 <- list(name = "mutation_rand", f = 4.5)
+      recpars1 <- list(name = "recombination_lbga")
+      mutpars2 <- list(name = "mutation_rand", f = 3)
+      recpars2 <- list(name = "recombination_blxAlphaBeta", alpha = 0.1, beta = 0.4)
+      
+      # Parâmetros do problema
+      popsize <- 5 * dimension
+      probpars <- list(name = "fn", xmin = rep(-5, dimension), xmax = rep(10, dimension))
+      selpars <- list(name = "selection_standard")
+      stopcrit <- list(names = "stop_maxeval", maxevals = 5000 * dimension)
+      
+      # Exportar as variáveis necessárias para o cluster
+      clusterExport(cl, varlist = c("ExpDE", "mutpars1", "recpars1", "mutpars2", "recpars2", 
+                                    "popsize", "selpars", "stopcrit", "probpars", "fn", "dimension"))
+      
+      # Função para executar as configurações paralelamente
+      execute_exp <- function(i) {
+        resultados_config1 <- ExpDE(mutpars = mutpars1, recpars = recpars1, popsize = popsize,
+                                    selpars = selpars, stopcrit = stopcrit, probpars = probpars)
+        resultados_config2 <- ExpDE(mutpars = mutpars2, recpars = recpars2, popsize = popsize,
+                                    selpars = selpars, stopcrit = stopcrit, probpars = probpars)
+        return(list(Config1 = resultados_config1$Fbest, Config2 = resultados_config2$Fbest))
+      }
+      
+      # Executar paralelamente os experimentos
+      results_parallel <- parLapply(cl, 1:n, execute_exp)
+      
+      # Separar os resultados em vetores
+      results_config1 <- sapply(results_parallel, function(x) x$Config1)
+      results_config2 <- sapply(results_parallel, function(x) x$Config2)
+      
+      # Calcular as médias
+      mean_config1 <- mean(results_config1)
+      mean_config2 <- mean(results_config2)
+      mean_general <- mean(c(results_config1, results_config2))
+      
+      # Montar os resultados como uma linha do DataFrame
+      result_row <- data.frame(
+        Dimension = dimension,
+        as.list(setNames(results_config1, colunas_config1)),
+        as.list(setNames(results_config2, colunas_config2)),
+        Mean_Config1 = mean_config1,
+        Mean_Config2 = mean_config2,
+        Mean_General = mean_general
+      )
+      
+      # Adicionar ao arquivo CSV
+      write.table(result_row, csv_file, sep = ",", col.names = FALSE, row.names = FALSE, append = TRUE)
+      
+    }, error = function(e) {
+      message(paste("Erro na dimensão:", dimension, " - ", e))
+      error_dimensions[[length(error_dimensions) + 1]] <- list(dimension = dimension, error = e)
+    })
+  }
+  # Fechar o cluster
+  stopCluster(cl)
+}
+
+# Carregar os resultados do arquivo CSV para verificar
+results <- read.csv(csv_file)
+print(head(results))
+
+# Mostrar dimensões problemáticas
+if (length(error_dimensions) > 0) {
+  cat("Dimensões com erros:\n")
+  print(error_dimensions)
+} else {
+  cat("Nenhuma dimensão apresentou erros.\n")
+}
+
+```
+
+
+Após a coleta dos dados, o código embaralha as linhas do DataFrame para eliminar possíveis padrões que possam enviesar a análise subsequente. Em seguida, ele ajusta os valores individuais das execuções para calcular os resíduos, subtraindo as médias geral e da configuração correspondente. Essa transformação é essencial para isolar as variações residuais e realizar análises estatísticas precisas, como testes de normalidade. Este procedimento permite comparar o desempenho entre configurações de forma mais robusta e alinhada com os pressupostos estatísticos necessários para análises posteriores.
+
+```{r}
+set.seed(123) # Garantir reprodutibilidade
+results_shuffled <- results[sample(nrow(results)), ] # Embaralha as linhas
+head(results_shuffled)
+```
+
+```{r}
+# Identificar as colunas de execução para Configuração 1 e Configuração 2
+columns_config1 <- grep("Config1_Run_", colnames(results_shuffled), value = TRUE)
+columns_config2 <- grep("Config2_Run_", colnames(results_shuffled), value = TRUE)
+
+# Substituir os valores nas colunas de Configuração 1
+for (col in columns_config1) {
+  results_shuffled[[col]] <- results_shuffled[[col]] - 
+    results_shuffled$Mean_General - results_shuffled$Mean_Config1
+}
+
+# Substituir os valores nas colunas de Configuração 2
+for (col in columns_config2) {
+  results_shuffled[[col]] <- results_shuffled[[col]] - 
+    results_shuffled$Mean_General - results_shuffled$Mean_Config2
+}
+
+# Visualizar o DataFrame atualizado
+head(results_shuffled)
+
+```
+
+```{r}
+# Remover as três últimas colunas
+results_individual <- results_shuffled[, -which(names(results_shuffled) %in% c("Mean_Config1", "Mean_Config2", "Mean_General"))]
+
+# Calcular resíduos
+calcular_residuos <- function(row) {
+  mean_general <- row["Mean_General"]
+  mean_config1 <- row["Mean_Config1"]
+  mean_config2 <- row["Mean_Config2"]
+  
+  # Selecionar resultados individuais
+  individual_results <- row[grep("Config[12]_Run_", names(row))]
+  
+  # Calcular resíduos para cada configuração
+  residuals_config1 <- individual_results[grep("Config1_Run_", names(individual_results))] - mean_general - mean_config1
+  residuals_config2 <- individual_results[grep("Config2_Run_", names(individual_results))] - mean_general - mean_config2
+  
+  c(residuals_config1, residuals_config2)
+}
+
+# Aplicar cálculo dos resíduos para cada linha
+residuals_matrix <- t(apply(results, 1, calcular_residuos))
+
+# Criar nomes de colunas descritivos
+col_names_config1 <- names(results)[grep("Config1_Run_", names(results_shuffled))]
+col_names_config2 <- names(results)[grep("Config2_Run_", names(results_shuffled))]
+residual_col_names <- c(
+  paste0("Residual_", col_names_config1),
+  paste0("Residual_", col_names_config2)
+)
+
+# Converter para DataFrame com os novos nomes de colunas
+residuals_df <- as.data.frame(residuals_matrix)
+names(residuals_df) <- residual_col_names
+
+# Verificar a estrutura do DataFrame de resíduos
+head(residuals_df)
+
+```
+
+### Teste de Normalidade
+```{r}
+# Carregar todos os resíduos
+residuals_matrix <- as.matrix(residuals_df)
+
+# 1. Teste de normalidade para todos os resíduos combinados
+all_residuals <- as.vector(residuals_matrix)
+shapiro_all <- shapiro.test(all_residuals)
+cat("Teste de Normalidade - Todos os Resíduos:\n")
+print(shapiro_all)
+
+# 2. Teste de normalidade para resíduos da Configuração 1
+config1_columns <- grep("Residual_Config1", colnames(residuals_df), value = TRUE)
+residuals_config1 <- as.vector(as.matrix(residuals_df[, config1_columns]))
+shapiro_config1 <- shapiro.test(residuals_config1)
+cat("\nTeste de Normalidade - Resíduos Configuração 1:\n")
+print(shapiro_config1)
+
+# 3. Teste de normalidade para resíduos da Configuração 2
+config2_columns <- grep("Residual_Config2", colnames(residuals_df), value = TRUE)
+residuals_config2 <- as.vector(as.matrix(residuals_df[, config2_columns]))
+shapiro_config2 <- shapiro.test(residuals_config2)
+cat("\nTeste de Normalidade - Resíduos Configuração 2:\n")
+print(shapiro_config2)
+```
+Os resultados dos testes de normalidade indicam que, tanto para os resíduos combinados quanto para os resíduos separados por configuração, a hipótese nula do teste Shapiro-Wilk, que assume que os dados seguem uma distribuição normal, foi rejeitada (p-valor < 2.2e-16). O valor da estatística W, próximo de 0.92 em todos os casos, reflete um desvio considerável em relação à normalidade. Esses resultados sugerem que os resíduos, tanto no conjunto total quanto em cada configuração (Configuração 1 e Configuração 2), não apresentam distribuição normal. Isso pode impactar a escolha de métodos estatísticos subsequentes, especialmente se estes assumirem normalidade nos dados, exigindo alternativas não paramétricas ou transformações nos resíduos para adequação.
+
+### Teste de Independência
+
+Para aplicar o teste de independência, o código mencionado calcula uma matriz de correlação, que verifica o grau de relação linear entre os resíduos de diferentes colunas. A interpretação da matriz ajudará a entender se há independência (valores de correlação próximos de 0) ou dependência (valores próximos de -1 ou 1).
+
+```{r}
+# Carregar os resíduos normalizados (se necessário)
+dados_normalizados <- residuals_matrix
+
+# Calcular a matriz de correlação para os resíduos normalizados
+matriz_correlacao <- cor(dados_normalizados, method = "pearson", use = "complete.obs")
+
+# Análise resumida dos valores de correlação
+cat("\nResumo da Correlação:\n")
+summary(as.vector(matriz_correlacao))
+```
+Os resultados da matriz de correlação indicam que os resíduos apresentam alta correlação linear entre si, com valores variando de 0,9583 a 1,0000. A mediana (0,9836) e a média (0,9830) reforçam a forte dependência linear entre as execuções analisadas. Esses resultados sugerem que os resíduos não são independentes, indicando possível interação entre os fatores analisados ou padrões sistemáticos nos dados que influenciam as diferentes execuções. Essa dependência deve ser considerada em análises subsequentes, especialmente se forem utilizados métodos que assumem independência dos resíduos, pois ela pode impactar a validade das conclusões estatísticas. Ajustes no modelo ou métodos específicos para tratar a dependência podem ser necessários.
+
+
