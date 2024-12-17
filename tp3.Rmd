@@ -33,17 +33,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Este estudo de caso investiga o desempenho de duas configurações do algoritmo de Evolução Diferencial (DE) na resolução de problemas de otimização baseados na função de Rosenbrock, com dimensões variando de 2 a 150. O objetivo é avaliar a eficiência e a robustez das configurações testadas em diferentes escalas de complexidade do problema.
 
-1. **Configurações Testadas:**
-   - **Configuração 1:** `recombination_lbga` e `mutation_rand` com fator de escala `f = 4.5`.
-   - **Configuração 2:** `recombination_blxAlphaBeta` (α = 0.1, β = 0.4) e `mutation_rand` com fator de escala `f = 3`.
+1.  Configurações Testadas: 
+   -  Configuração 1:  `recombination_lbga` e `mutation_rand` com fator de escala `f = 4.5`.
+   -  Configuração 2:  `recombination_blxAlphaBeta` (α = 0.1, β = 0.4) e `mutation_rand` com fator de escala `f = 3`.
 
-2. **Problema de Otimização:** A função de Rosenbrock, amplamente utilizada como benchmark, gerada com o pacote `smoof`.
+2.  Problema de Otimização:  A função de Rosenbrock, amplamente utilizada como benchmark, gerada com o pacote `smoof`.
 
-3. **Parâmetros do Algoritmo:**
-   - **Tamanho da População:** `popsize = 5 * dim` (proporcional à dimensão do problema).
-   - **Critérios de Parada:** Avaliações máximas `maxevals = 5000 * dim` e iterações máximas `maxiter = 100 * dim`.
+3.  Parâmetros do Algoritmo: 
+   -  Tamanho da População:  `popsize = 5 * dim` (proporcional à dimensão do problema).
+   -  Critérios de Parada:  Avaliações máximas `maxevals = 5000 * dim` e iterações máximas `maxiter = 100 * dim`.
 
-4. **Análise de Resultados:** Os desempenhos médios das configurações foram comparados em diferentes dimensões utilizando métodos estatísticos, a fim de identificar diferenças significativas e inferir a melhor configuração para cenários variados.
+4.  Análise de Resultados:  Os desempenhos médios das configurações foram comparados em diferentes dimensões utilizando métodos estatísticos, a fim de identificar diferenças significativas e inferir a melhor configuração para cenários variados.
 
 Este estudo visa contribuir para a compreensão das implicações práticas das escolhas de recombinação e mutação no algoritmo DE, considerando a escalabilidade em problemas de otimização.
 
@@ -218,7 +218,7 @@ ggplot(results, aes(x = Dimension)) +
   geom_line(aes(y = Residual_Config1, color = "Resíduo Configuração 1")) +
   geom_line(aes(y = Residual_Config2, color = "Resíduo Configuração 2")) +
   labs(
-    title = "Desempenho das Configurações com Média e Resíduos ao Longo das Dimensões",
+    title = "Desempenho das Configurações em relação aos Resíduos ao Longo das Dimensões",
     x = "Dimensão",
     y = "Resultado (Fbest, Média ou Resíduo)",
     color = "Legenda"
@@ -369,28 +369,6 @@ head(results_shuffled)
 ```
 
 ```{r}
-# Identificar as colunas de execução para Configuração 1 e Configuração 2
-columns_config1 <- grep("Config1_Run_", colnames(results_shuffled), value = TRUE)
-columns_config2 <- grep("Config2_Run_", colnames(results_shuffled), value = TRUE)
-
-# Substituir os valores nas colunas de Configuração 1
-for (col in columns_config1) {
-  results_shuffled[[col]] <- results_shuffled[[col]] - 
-    results_shuffled$Mean_General - results_shuffled$Mean_Config1
-}
-
-# Substituir os valores nas colunas de Configuração 2
-for (col in columns_config2) {
-  results_shuffled[[col]] <- results_shuffled[[col]] - 
-    results_shuffled$Mean_General - results_shuffled$Mean_Config2
-}
-
-# Visualizar o DataFrame atualizado
-head(results_shuffled)
-
-```
-
-```{r}
 # Remover as três últimas colunas
 results_individual <- results_shuffled[, -which(names(results_shuffled) %in% c("Mean_Config1", "Mean_Config2", "Mean_General"))]
 
@@ -404,8 +382,8 @@ calcular_residuos <- function(row) {
   individual_results <- row[grep("Config[12]_Run_", names(row))]
   
   # Calcular resíduos para cada configuração
-  residuals_config1 <- individual_results[grep("Config1_Run_", names(individual_results))] - mean_general - mean_config1
-  residuals_config2 <- individual_results[grep("Config2_Run_", names(individual_results))] - mean_general - mean_config2
+  residuals_config1 <- individual_results[grep("Config1_Run_", names(individual_results))] - mean_general
+  residuals_config2 <- individual_results[grep("Config2_Run_", names(individual_results))] - mean_general
   
   c(residuals_config1, residuals_config2)
 }
@@ -429,6 +407,39 @@ names(residuals_df) <- residual_col_names
 head(residuals_df)
 
 ```
+```{r}
+# Converter residuals_df para formato longo
+residuals_long <- residuals_df %>%
+  mutate(Dimension = 1:nrow(residuals_df)) %>% # Adicionar coluna de dimensão
+  pivot_longer(
+    cols = starts_with("Residual_"), 
+    names_to = "Configuration",
+    values_to = "Residual"
+  ) %>%
+  mutate(
+    Configuration_Type = ifelse(
+      grepl("Config1", Configuration), 
+      "Configuração 1", 
+      "Configuração 2"
+    )
+  )
+
+# Criar o gráfico
+ggplot(residuals_long, aes(x = Dimension, y = Residual, color = Configuration_Type)) +
+  geom_line(alpha = 0.7) + # Linhas para visualizar tendências
+  geom_point(alpha = 0.5) + # Pontos para cada resíduo
+  labs(
+    title = "Distribuição de Resíduos por Configuração ao Longo das Dimensões",
+    x = "Dimensão",
+    y = "Resíduo",
+    color = "Configuração"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+## Teste de premissa
+
 
 ### Teste de Normalidade
 ```{r}
@@ -455,7 +466,7 @@ shapiro_config2 <- shapiro.test(residuals_config2)
 cat("\nTeste de Normalidade - Resíduos Configuração 2:\n")
 print(shapiro_config2)
 ```
-Os resultados dos testes de normalidade indicam que, tanto para os resíduos combinados quanto para os resíduos separados por configuração, a hipótese nula do teste Shapiro-Wilk, que assume que os dados seguem uma distribuição normal, foi rejeitada (p-valor < 2.2e-16). O valor da estatística W, próximo de 0.92 em todos os casos, reflete um desvio considerável em relação à normalidade. Esses resultados sugerem que os resíduos, tanto no conjunto total quanto em cada configuração (Configuração 1 e Configuração 2), não apresentam distribuição normal. Isso pode impactar a escolha de métodos estatísticos subsequentes, especialmente se estes assumirem normalidade nos dados, exigindo alternativas não paramétricas ou transformações nos resíduos para adequação.
+Os resultados dos testes de normalidade indicam que, tanto para os resíduos combinados quanto para os resíduos separados por configuração, a hipótese nula do teste Shapiro-Wilk, que assume que os dados seguem uma distribuição normal, foi rejeitada (p-valor < 0.05). O valor da estatística W, próximo de 0.9 em todos os casos, reflete um desvio considerável em relação à normalidade. Esses resultados sugerem que os resíduos, tanto no conjunto total quanto em cada configuração (Configuração 1 e Configuração 2), não apresentam distribuição normal. Isso pode impactar a escolha de métodos estatísticos subsequentes, especialmente se estes assumirem normalidade nos dados, exigindo alternativas não paramétricas ou transformações nos resíduos para adequação.
 
 ### Teste de Independência
 
@@ -474,4 +485,172 @@ summary(as.vector(matriz_correlacao))
 ```
 Os resultados da matriz de correlação indicam que os resíduos apresentam alta correlação linear entre si, com valores variando de 0,9583 a 1,0000. A mediana (0,9836) e a média (0,9830) reforçam a forte dependência linear entre as execuções analisadas. Esses resultados sugerem que os resíduos não são independentes, indicando possível interação entre os fatores analisados ou padrões sistemáticos nos dados que influenciam as diferentes execuções. Essa dependência deve ser considerada em análises subsequentes, especialmente se forem utilizados métodos que assumem independência dos resíduos, pois ela pode impactar a validade das conclusões estatísticas. Ajustes no modelo ou métodos específicos para tratar a dependência podem ser necessários.
 
+### Teste de Homogeneidade de Variância:
 
+```{r}
+
+dados_longo <- pivot_longer(
+  residuals_df, 
+  cols = starts_with("Residual_Config"), 
+  names_to = c("Configuração", "Execução"),
+  names_pattern = "Residual_(Config\\d+)_Run_(\\d+)",
+  values_to = "Resíduo"
+)
+
+
+leveneTest(Resíduo ~ Configuração, data = dados_longo)
+```
+O Teste de Levene foi aplicado para verificar a homogeneidade de variâncias entre os grupos analisados, com o uso da mediana como medida de centralidade. O teste resultou em um valor de p-valor significativamente menor do que o nível de significância adotado de  α = 0,05. Dessa forma, rejeita-se a hipótese nula do teste (H₀), que afirma que as variâncias dos grupos são homogêneas. Isso indica que há diferenças significativas nas variâncias entre os grupos analisados.
+
+### Conclusão do Teste de premissa
+
+
+Os testes estatísticos realizados indicaram que os resíduos não seguem uma distribuição normal (Shapiro-Wilk com p-valor < 0,05), apresentam alta dependência linear (média e mediana das correlações próximas a 0,98), e não possuem homogeneidade de variâncias entre as configurações (Teste de Levene com p-valor < 0,001). Esses resultados invalidam o uso do ANOVA tradicional, que assume normalidade, independência e homogeneidade de variâncias. Como alternativa, recomenda-se o uso de métodos não paramétricos, como o Teste de Wilcoxon para comparações pareadas entre as configurações ou o Teste de Kruskal-Wallis para múltiplos grupos.
+
+
+## Teste não paramétricos 
+Para determinar qual das duas configurações (Config1 e Config2) apresenta melhor desempenho em todos os cenários, optamos pelo Teste de Permutação. Esse método foi escolhido devido às características dos dados, que não atendem às premissas de normalidade e homogeneidade de variâncias, conforme verificado nos testes preliminares (Shapiro-Wilk e Levene). O Teste de Permutação é robusto, não exige suposições rígidas sobre a distribuição dos dados e permite a comparação direta das médias entre as configurações. Ele utiliza reamostragens para construir uma distribuição empírica da estatística de teste, fornecendo uma análise confiável para identificar se as diferenças observadas entre as configurações são estatisticamente significativas.
+
+### Formulação do Teste de Hipótese
+
+A comparação entre as configurações será feita utilizando a  diferença média  entre os resíduos como estatística de interesse. As hipóteses são formuladas da seguinte maneira:
+
+-  Hipótese Nula (H0) : Não há diferença significativa entre as médias das duas configurações.
+  \[
+  H_0: \mu_{\text{Config1}} = \mu_{\text{Config2}}
+  \]
+-  Hipótese Alternativa (H1) : Há uma diferença significativa entre as médias das duas configurações.
+  \[
+  H_1: \mu_{\text{Config1}} \neq \mu_{\text{Config2}}
+  \]
+
+A análise será realizada utilizando  nível de significância  \(\alpha = 0.05\), garantindo que a probabilidade de um erro tipo I (rejeitar H0 quando verdadeira) não ultrapasse 5%.
+
+### Teste de Hipótese
+
+```{r}
+# Inicializar lista para armazenar resultados de cada dimensão
+dimensoes <- unique(results_shuffled$Dimension) # Obter valores únicos de dimensão
+n_perm <- 100000  # Número de permutações
+resultados_dimensao <- data.frame(Dimensao = integer(), p_value = numeric())
+
+# Loop para realizar o Teste de Permutação em cada dimensão
+for (dim in dimensoes) {
+  dim <- as.numeric(dim)  # Garantir que dim é numérico
+  
+  # Filtrar linhas correspondentes à dimensão atual
+  linhas_dim <- results_shuffled[results_shuffled$Dimension == dim, ]
+  
+  # Verificar se a coluna "Mean_General" existe e extrair sua média
+  mean_general <- linhas_dim$Mean_General[1] 
+  
+  # Extrair resíduos para Config1 e Config2 e subtrair a média global
+  config1_cols <- grep("Config1_Run_", colnames(linhas_dim), value = TRUE)
+  config2_cols <- grep("Config2_Run_", colnames(linhas_dim), value = TRUE)
+  
+  config1 <- as.vector(as.matrix(linhas_dim[, config1_cols])) - mean_general
+  config2 <- as.vector(as.matrix(linhas_dim[, config2_cols])) - mean_general  
+  
+  t_hat <- mean(config1) - mean(config2)
+  combined_data <- append(config1, config2)
+  n1 <- length(config1)
+  n2 <- length(config2)
+  t_perm <- numeric(n_perm)
+  
+  # Realizar Teste de Permutação
+  set.seed(123 + dim)  # Reprodutibilidade
+  for (i in 1:n_perm) {
+      S_perm <- sample(combined_data)  # Embaralhar os dados
+      X_perm <- S_perm[1:n1]  # Novos valores para config1
+      Y_perm <- S_perm[(n1 + 1):(n1 + n2)]  # Novos valores para config2
+      t_perm[i] <- mean(X_perm) - mean(Y_perm)
+  }
+    
+  # Calcular p-valor (H1: mu_config1 > mu_config2)
+  p_value <- (1 + sum(abs(t_perm) >= abs(t_hat))) / (1 + n_perm)  
+  resultados_dimensao <- rbind(resultados_dimensao, data.frame(Dimensao = dim, p_value = p_value))
+ 
+}
+resultados_dimensao$p_value <- formatC(as.numeric(resultados_dimensao$p_value), format = "e", digits = 10)
+
+# Imprimir resultados
+print(resultados_dimensao)
+```
+
+Os resultados obtidos a partir do  Teste de Permutação  evidenciam diferenças estatisticamente significativas entre as configurações  Config1  e  Config2  em todas as dimensões analisadas. Com p-valores extremamente baixos, próximos de \(9.9999 \times 10^{-6}\), para todas as dimensões testadas  é possível rejeitar a  Hipótese Nula (\(H_0\))  com alto grau de confiança (\(\alpha = 0.05\)). Esses valores indicam que as diferenças observadas entre as médias das duas configurações não são atribuíveis ao acaso e, portanto, apontam um  desempenho significativamente distinto  entre Config1 e Config2. Isso reforça a robustez do método aplicado e a confiabilidade dos resultados obtidos.
+
+
+
+
+```{r}
+# Combinar resíduos de todas as dimensões para Config1 e Config2
+config1_global <- as.vector(as.matrix(residuals_df[, grep("Residual_Config1", colnames(residuals_df))]))
+config2_global <- as.vector(as.matrix(residuals_df[, grep("Residual_Config2", colnames(residuals_df))]))
+
+# Calcular a diferença média observada global
+obs_diff_global <- mean(config1_global) - mean(config2_global)
+
+# Combinar todos os dados em um único vetor para permutação
+combined_data_global <- c(config1_global, config2_global)
+n_config1_global <- length(config1_global)
+n_perm <- 100000  # Número de permutações
+perm_diffs_global <- numeric(n_perm)  # Inicializar vetor para armazenar permutações
+
+# Realizar Teste de Permutação Global
+set.seed(999)  # Garantir reprodutibilidade
+for (i in 1:n_perm) {
+  shuffled_data <- sample(combined_data_global)  # Embaralhar os dados
+  perm_config1 <- shuffled_data[1:n_config1_global]  # Nova amostra Config1
+  perm_config2 <- shuffled_data[(n_config1_global + 1):length(shuffled_data)]  # Nova amostra Config2
+  perm_diffs_global[i] <- mean(perm_config1) - mean(perm_config2)  # Estatística de permutação
+}
+
+
+p_value_global <- (1 + sum(abs(perm_diffs_global) >= abs(obs_diff_global))) / (1 + n_perm) 
+# Exibir resultados globais
+cat("### Teste de Permutação Global ###\n")
+cat("Diferença média observada (global):", obs_diff_global, "\n")
+cat("P-valor (global):", p_value_global, "\n")
+
+```
+
+Com base nos resultados do  Teste de Permutação Global , a  diferença média observada  de  -1.706.261  indica que os tempos da  Config2  foram significativamente maiores do que os da  Config1 . Como o desempenho é avaliado pelo tempo e  quanto maior o tempo, pior a solução , conclui-se que a  Config2  apresentou um desempenho  muito inferior  em relação à  Config1 . O p-valor extremamente baixo ( 9.9999 × 10⁻⁶ ) reforça que essa diferença não é fruto do acaso, sendo estatisticamente significativa. Assim, a  Config1  se destaca como a melhor solução, apresentando tempos menores e, consequentemente, maior eficiência em comparação à  Config2 .
+
+
+```{r}
+# Dados de exemplo: ajuste para usar seus próprios dados
+config1_times <- as.vector(as.matrix(residuals_df[, grep("Residual_Config1", colnames(residuals_df))]))
+config2_times <- as.vector(as.matrix(residuals_df[, grep("Residual_Config2", colnames(residuals_df))]))
+
+# Criar um dataframe consolidado
+data_visual <- data.frame(
+  Tempo = c(config1_times, config2_times),
+  Configuração = rep(c("Config1", "Config2"), c(length(config1_times), length(config2_times)))
+)
+
+# Gráfico de Boxplot
+ggplot(data_visual, aes(x = Configuração, y = Tempo, fill = Configuração)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Comparação de Tempos entre Config1 e Config2",
+       x = "Configuração",
+       y = "Tempo",
+       fill = "Configuração") +
+  scale_fill_manual(values = c("Config1" = "skyblue", "Config2" = "tomato")) +
+  theme(text = element_text(size = 12))
+
+```
+O gráfico de caixas apresenta uma comparação visual dos tempos entre as configurações Config1 e Config2. Observa-se que a Config1 possui uma mediana significativamente menor, além de uma distribuição mais concentrada abaixo do eixo zero, indicando tempos menores e mais consistentes. Em contraste, a Config2 apresenta valores de tempo consideravelmente mais elevados e maior dispersão, evidenciando um desempenho inferior. A presença de outliers na Config1 sugere alguns valores atípicos, porém eles não comprometem a tendência geral. Assim, a análise confirma que a Config1 supera a Config2, apresentando tempos menores e, consequentemente, melhor desempenho.
+
+### Teste de Wilcoxon
+
+```{r}
+# Teste de Wilcoxon
+wilcox_result <- wilcox.test(config1_global, config2_global, paired = TRUE, alternative = "less")
+
+# Exibir resultado
+print(wilcox_result)
+
+```
+
+O resultado do  Teste de Wilcoxon com correção de continuidade  reforça as conclusões obtidas anteriormente. Com um  p-valor extremamente baixo  (p < 2.2 × 10⁻¹⁶), rejeita-se a  Hipótese Nula (\(H_0\))  de que não há diferença significativa entre as configurações. A hipótese alternativa, que indica que os tempos da  Config1  são  significativamente menores  do que os da  Config2 , é corroborada. O valor da estatística \(V = 264\) e o resultado do teste confirmam que a  Config1  apresenta desempenho  superior , com tempos mais baixos, enquanto a  Config2  demonstra desempenho inferior, validando as análises anteriores de maneira robusta.
