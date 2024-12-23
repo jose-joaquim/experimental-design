@@ -43,7 +43,7 @@ Inicialmente definida para duas dimensões, possui variantes que a permite ser a
 
 ### O algoritmo *Differential Evolution*
 
-De acordo com a taxonomia utilizada no livro-texto de X [], o DE é uma meta-heurística evolucionária, originalmente desenvolvida para a resolução de problemas de otimização em espaço de buscas contínuo.
+De acordo com a taxonomia utilizada no livro-texto de @Coello2007, o DE é uma meta-heurística evolucionária, originalmente desenvolvida para a resolução de problemas de otimização em espaço de buscas contínuo.
 Algoritmos classificados como _evolucionários_ otimizam um dado problema combinatório através da manutenção das chamadas populações.
 Uma população é um conjunto de invíduos - soluções para o problema que está sendo otimizado - que podem ser gerados aleatoriamente e em seguida são constantemente modificados com a utilização de operadores especificados nos parâmetros de entrada do algoritmo.
 Nesse estudo de caso, focamos nos operadores de mutação (aqueles que modificam - ou perturbam - um indivíduo) e de recombinação (aqueles que selecionam um subconjunto de invidíduos para gerar um descendente).
