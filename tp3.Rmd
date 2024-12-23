@@ -568,7 +568,7 @@ p + geom_line(linetype=2) + geom_point(size=5)
 
 ## Teste das Premissas
 
-Os experimentos realizados e detalhados nas seções anteriores indicam que a configuração X performa melhor do que a configuração Y.
+Os experimentos realizados e detalhados nas seções anteriores indicam que a configuração 1 (Config1) performa melhor do que a configuração 2 (Config2).
 No entanto, esses experimentos só poderão ser validados se os resíduos dos mesmos seguirem as premissas do ANOVA: normalidade, independência e homoscedasticidade.
 Nas seções seguintes, apresentaremos as estatíticas construídas para verificarmos cada uma das premissas citadas.
 
@@ -766,7 +766,7 @@ cat("P-valor (global):", p_value_global, "\n")
 ```
 
 Com base nos resultados do Teste de Permutação Global, a diferença média observada de $-1,706,261$ indica que os tempos da Config2 foram significativamente maiores do que os da Config1.
-Como o desempenho é avaliado pelo tempo e quanto maior o tempo, pior a solução , conclui-se que a Config2 apresentou um desempenho muito inferior em relação à Config1 .
+Como o desempenho é avaliado pelo tempo e quanto maior o tempo, pior a solução , conclui-se que a Config2 apresentou um desempenho muito inferior em relação à Config1.
 O p-valor extremamente baixo ( $9.9999 \times 10^{-6}$ ) reforça que essa diferença não é fruto do acaso, sendo estatisticamente significativa.
 Assim, a Config1 se destaca como a melhor solução, apresentando tempos menores e, consequentemente, maior eficiência em comparação à Config2.
 
@@ -816,8 +816,18 @@ Com um p-valor extremamente baixo ($\leq 2.2 \times 10^{-16}$), rejeita-se a Hip
 A hipótese alternativa, que indica que os tempos da Config1 são significativamente menores do que os da Config2 , é corroborada.
 O valor da estatística $V = 264$ e o resultado do teste confirmam que a Config1 apresenta desempenho superior , com tempos mais baixos, enquanto a Config2 demonstra desempenho inferior, validando as análises anteriores de maneira robusta.
 
-# Referências
+# Conclusões
 
-[1] Campelo, F., Takahashi, F. Sample size estimation for power and accuracy in the experimental comparison of algorithms. 
-*J Heuristics* **25**, 305–338 (2019).
-<https://doi.org/10.1007/s10732-018-9396-7>. 
+Nesse estudo de caso, utilizamos técnicas estatísticas para detectar diferenças na performance entre configurações da meta-heurística DE para a otimização de funções Rosenbrock.
+Em particular, aplicamos a metodologia de blocagem (*Randomized Complete Block Design*) para eliminar efeitos indesejáveis que poderiam invalidar as conclusões extraídas a partir de testes e gráficos.
+
+Os primeiros testes realizados assumiram que os dados seguiriam uma distribuição normal, o que foi refutado através da análise das premissas do teste ANOVA.
+Dessa forma, estendemos o nosso estudo com os chamados testes não paramétricos para validar a nossa hipótese alternativa de que existe uma diferença na performance do DE quando executado com duas configurações diferentes.
+
+Uma vez aceita a hipótese alternativa para diferença de performance entre os algoritmos, utilizamos a saída dos testes para determinar qual a melhor configuração do DE para a otimização de funções Rosenbrock.
+Nessa análise, que consistiu na verificação dos tempos de execução de cada algoritmo, foi verificado que a configuração 1 (Config1) obteve performance melhor do que Config2.
+
+Como trabalho futuro, sugerimos a utilização de outros testes estatísticos não paramétricos para a validação de tais resultados.
+Além disso, é de interesse do grupo a realização de um experimento fatorial, para uma análise mais exaustiva das possibilidades de configuração da meta-heurística DE.
+
+# Referências
