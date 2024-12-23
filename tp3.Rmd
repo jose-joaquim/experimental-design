@@ -644,7 +644,7 @@ leveneTest(Resíduo ~ Configuração, data = dados_longo)
 ```
 
 O Teste de Levene foi aplicado para verificar a homogeneidade de variâncias entre os grupos analisados, com o uso da mediana como medida de centralidade.
-O teste resultou em um valor de p-valor significativamente menor do que o nível de significância adotado de $\alpha = 0.05#
+O teste resultou em um valor de p-valor significativamente menor do que o nível de significância adotado de $\alpha = 0.05$.
 Dessa forma, rejeita-se a hipótese nula do teste ($H_0$), que afirma que as variâncias dos grupos são homogêneas.
 Isso indica que há diferenças significativas nas variâncias entre os grupos analisados.
 
