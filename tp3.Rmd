@@ -511,61 +511,6 @@ ggplot(residuals_long, aes(x = Dimension, y = Residual, color = Configuration_Ty
   theme(legend.position = "top")
 ```
 
-## Execução do Experimento (50 repetições)
-
-```{r}
-
-# Load data
-data <- read.csv("teste2.csv")
-
-# Aggregate data (algorithm means by instance group)
-aggdata <- with(data, aggregate(x = Result,
-                                by = list(Algorithm, Group),
-                                FUN = mean))
-
-# Rename columns and coerce factor variables
-names(aggdata) <- c("Algorithm", "Instance_Group", "Y")
-for (i in 1:2) aggdata[, i] <- as.factor(aggdata[, i])
-
-# Summary
-summary(aggdata)
-
-# Plot
-p <- ggplot(aggdata, aes(x = Instance_Group, y = log(Y),
-group = Algorithm, colour = Algorithm))
-
-p + geom_line(linetype=2) + geom_point(size=5)
-```
-
-```{r}
-model2 <- aov(log(Y)~Algorithm+Instance_Group, data=aggdata)
-summary(model2)
-summary.lm(model2)$r.squared
-par(mfrow = c(2, 2))
-plot(model2, pch = 20, las = 1)
-```
-
-```{r}
-
-library(tidyr)
-
-df_wide <- aggdata %>%
-  pivot_wider(names_from = Algorithm, values_from = Y)
-
-df_wide <- df_wide %>%
-  mutate(Diff_Percent = (`2` - `1`) / `1` * 100)
-
-# Summary
-summary(df_wide)
-
-# Plot
-p <- ggplot(df_wide, aes(x = Instance_Group, y = Diff_Percent))
-
-p + geom_line(linetype=2) + geom_point(size=5)
-
-
-```
-
 ## Teste das Premissas
 
 Os experimentos realizados e detalhados nas seções anteriores indicam que a configuração 1 (Config1) performa melhor do que a configuração 2 (Config2).
