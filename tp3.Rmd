@@ -12,7 +12,6 @@ editor_options:
     wrap: sentence
 ---
 
-
 ```{r setup, include=FALSE}
 # Função para garantir a instalação de pacotes
 pacotes_necessarios <- c("dplyr", "ggplot2", "pwr", "readr", "effectsize", "effsize", "knitr","tidyr", "multcomp", "this.path", "car","ExpDE","smoof","parallel")
@@ -28,29 +27,92 @@ for (pacote in pacotes_necessarios) {
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 # Descrição do Problema
 
-Este estudo de caso investiga o desempenho de duas configurações do algoritmo de Evolução Diferencial (DE) na resolução de problemas de otimização baseados na função de Rosenbrock, com dimensões variando de 2 a 150. O objetivo é avaliar a eficiência e a robustez das configurações testadas em diferentes escalas de complexidade do problema.
+Este estudo de caso investiga o desempenho de duas configurações distintas do algoritmo de Evolução Diferencial (DE - do inglês *differential evolution*) na resolução de problemas de otimização baseados na função de Rosenbrock.
+O objetivo é avaliar qual configuração é melhor na busca pelo valor mínimo da função avaliada, em diferentes escalas de complexidade.
+Quanto menor o valor alcançado, melhor o resultado.
+Visamos assim contribuir para a compreensão das implicações práticas das escolhas de recombinação e mutação no algoritmo DE, considerando a escalabilidade em problemas de otimização.
 
-1.  Configurações Testadas: 
-   -  Configuração 1:  `recombination_lbga` e `mutation_rand` com fator de escala `f = 4.5`.
-   -  Configuração 2:  `recombination_blxAlphaBeta` (α = 0.1, β = 0.4) e `mutation_rand` com fator de escala `f = 3`.
+A função de Rosenbrock é uma função não-convexa e monomodal que é comumente utilizada para testar o desempenho de algortimos de otimização.
+Ela se caracteriza por possuir um mínimo global em um vale plano, longo e estreito que o torna de difícil convergência.
+Inicialmente definida para duas dimensões, possui variantes que a permite ser avaliada em dimensões maiores, tornando o problema de otimização muito mais complexo.
 
-2.  Problema de Otimização:  A função de Rosenbrock, amplamente utilizada como benchmark, gerada com o pacote `smoof`.
+O DE é um algoritmo baseado em populações, que através de um ciclo iterativo, no qual um conjunto de soluções-candidatas ao problema são repetidamente sujeitas a operadores de variação (mutação e recombinação) e seleção, de forma a promover uma exploração do espaço de variáveis do problema em busca de um ponto de ótimo (máximo ou mínimo) de uma dada função-objetivo.
 
-3.  Parâmetros do Algoritmo: 
-   -  Tamanho da População:  `popsize = 5 * dim` (proporcional à dimensão do problema).
-   -  Critérios de Parada:  Avaliações máximas `maxevals = 5000 * dim` e iterações máximas `maxiter = 100 * dim`.
+As duas configurações do DE testadas aqui neste estudo se diferenciam entre si pela forma como executam os operadores de mutação e de recombinação.
+Na configuração 1, é utilizado um operador de mutação do tipo aleatório com fator de escala $f=4,5$, enquanto que a recombinação é do tipo LBGA (Linear Breeder Genetic Algorithm).
+Já para a configuração 2, temos a mutação com $f=3$ e recombinação do tipo BLX (Blend Alpha Beta).
 
-4.  Análise de Resultados:  Os desempenhos médios das configurações foram comparados em diferentes dimensões utilizando métodos estatísticos, a fim de identificar diferenças significativas e inferir a melhor configuração para cenários variados.
+# Planejamento do Experimento
 
-Este estudo visa contribuir para a compreensão das implicações práticas das escolhas de recombinação e mutação no algoritmo DE, considerando a escalabilidade em problemas de otimização.
+## Teste de Hipótese
 
+O tipo de experimento estudado sugere que seja usado o teste pareado para comparar a diferença de performance entre as duas configurações do DE em diversas instâncias.
+Sendo assim, considerando o conjunto de instâncias $\Gamma = \{\gamma_1, \gamma_2,...\}$, onde cada elemento $\gamma_j$ representa a função de Rosenbrock em uma dada dimensão, e o conjunto de algoritmos formado pelas duas configurações $\Lambda = \{a_{c1}, a_{c2}\}$, estamos interessados na média $\mu_D$ da distribuição $P(\Phi = \{\phi_1, \phi_2, \cdots \, \phi_N\})$, tal que
 
-# Metodologia
+$$
+\phi_j = x_{1j}-x_{2j}
+$$
 
-## Teste Esploratorio
+onde $x_{1j}$ e $x_{2j}$ são as medidas de performance do algoritmo 1 e 2 na instância $j$ e $\phi_j$ é a diferença entre elas.
+
+Como a classe de algoritmo a qual o DE pertence tem como característica possuirem um componente aleatório em seu resultado, $x_{1j}$, $x_{2j}$ e $\phi_j$ comportam-se como variáveis aleatórias.
+Dessa forma, a diferença de performance é melhor representada como sendo
+
+$$
+\phi_j = \overline{X}_{1j}-\overline{X}_{2j}
+$$
+
+sendo $\overline{X}_{ij}$ a média amostral da performance do algoritmo $i$ na instância $j$, obtida após $n_{ij}$ repetições.
+
+Podemos então definir o seguinte teste de hipóteses em relação ao $\mu_D$
+
+$$
+H_0: \mu_D = 0 \\
+H_1: \mu_D \neq 0
+$$
+
+Com base nisso, com um nível de significância $\alpha = 0,05$ e poder do teste $\pi = 1-\beta=0,8$, estamos interessados em em detectar uma diferença de performance entre os algoritmos tal que o tamanho de efeito patronizado mínimo seja $d^* = δ∗/σ = 0.5$.
+
+## Tamanho Amostral
+
+O cálculo do tamanho amostral a seguir mostra que, para realizar um teste-t pareado com uma diferença de efeito (d) de 0,5, um nível de significância de 5% (sig.level = 0,05) e um poder estatístico de 80% (power = 0,8), são necessárias 33,37 observações pareadas.
+Como o número de pares deve ser inteiro, este foi arredondado para 34.
+Isso indica que é necessário avaliar as duas configurações do algoritmo em 34 instâncias diferentes (dimensões da função Rosenbrock), ou seja, que teremos $|\Gamma| = N = 34$.
+
+```{r}
+pwr.t.test(d = 0.5, sig.level = 0.05, power = 0.8, type = "paired")
+```
+
+As 34 instâncias - ou dimensões da função Rosenbrock - foram escolhidas de forma aleatória dentro do intervalo [2,150], conforme abaixo:
+
+```{r}
+intervalo <- 2:150
+N = 34
+set.seed(123)
+instancias <- sort(sample(intervalo, size = N, replace = FALSE), decreasing = FALSE)
+print(dim_range)
+```
+
+A incerteza associada a $\overline{X}_{ij}$ devido ao número finito de observações $n_{ij}$ afeta diretamente a estimação de $\phi_j$, que por sua vez influencia no poder do teste estatístico sobre $\mu_D$.
+Deseja-se então obter o número de repetições $n_{ij}$ tal que a sua variância seja irrelevante perante a variância do conjunto $\Phi$.
+
+Como não há conhecimento prévio sobre a distribuição de probabilidade de $x_{ij}$, decidimos por fazer $n_{ij} = 30$, ou seja, rodar cada algoritmo 30 vezes em cada uma das 34 instâncias.
+
+## Coleta dos Dados
+
+Apesar de já ter definido a quantidade de instâncias ($N=34$) e o número de repetições ($n_{ij} = 30$), decidimos por inicialmente fazer uma varredura exploratória da performance dos dois algoritmos em todas as dimensões do intervalo $[2,150]$, fazendo apenas uma repetição ($n_{ij} = 1$).
+Isso nos deu uma primeira impressão sobre como é o comportamento da performance com o aumento da dimensão.
+
+Após essa primeira análise, o experimento completo foi executado e então obtivemos os dados necessários para a análise estatística, que foram guardados em arquivos CSV.
+Para reduzir o tempo total de execução do experimento, que alcança várias horas, principalmente por causa das dimensões maiores, optamos por usar uma extratégia de processamento paralelo.
+
+# Resultados
+
+## Análise Exploratória
+
+### Avaliação Inicial de Otimização da Função de Rosenbrok
 
 ```{r}
 
@@ -91,11 +153,10 @@ print(resultados_config1$Fbest)
 print(resultados_config2$Fbest)
 ```
 
-Os resultados obtidos indicam que a primeira configuração do algoritmo, composta pela recombinação recombination_lbga e mutação mutation_rand com fator 4.5, pode apresentar um desempenho significativamente melhor em relação à segunda configuração, que utilizou a recombinação recombination_blxAlphaBeta e mutação mutation_rand com fator 3. Esse indicativo é evidente pelos valores da função objetivo, com a primeira configuração atingindo um valor final consideravelmente inferior ao resultado obtido pela segunda, ressaltando sua maior eficácia na minimização da função de Rosenbrock no cenário analisado.
+Os resultados obtidos indicam que para uma única execução em uma dimensão qualquer (16) a primeira configuração do algoritmo, pode apresentar um desempenho significativamente melhor em relação à segunda configuração.
+Isso é evidente pelos valores da função objetivo, com a primeira configuração atingindo um valor final consideravelmente inferior ao resultado obtido pela segunda (3161 contra 207750), o que é um indicativo inicial de sua melhor performance na minimização da função de Rosenbrock no cenário analisado.
 
-
-### Execução do Algoritmo para Diversas Dimensões
-
+### Avalição da Relação Entre Dimensão e Performance
 
 ```{r}
 dim_range <- 2:150
@@ -155,12 +216,6 @@ results <- read.csv(csv_file)
 head(results)
 ```
 
-
-### Visualização dos Resultados
-
-
-Criar um gráficos para observar tendências nas duas configurações ao longo das dimensões do problema.
-
 ```{r}
 
 # Gráfico de linha comparando os desempenhos
@@ -169,12 +224,14 @@ ggplot(results, aes(x = Dimension)) +
   geom_line(aes(y = Best_Config2, color = "Configuração 2")) +
   labs(title = "Desempenho das Configurações ao Longo das Dimensões",
        x = "Dimensão",
-       y = "Melhor Resultado (Fbest)",
+       y = "Mínimo Obtido da Função de Rosenbrock",
        color = "Configuração") +
   theme_minimal()
 ```
-Observa-se que, de maneira geral, a Configuração 1 (recombination_lbga e mutation_rand com fator 4.5) apresenta melhores resultados em comparação com a Configuração 2 (recombination_blxAlphaBeta e mutation_rand com fator 3) em todas as dimensões avaliadas. O desempenho das duas configurações degrada progressivamente com o aumento da dimensão, o que era esperado devido à maior complexidade do problema.
 
+Observa-se que, de maneira geral, a Configuração 1 apresentou melhores resultados em comparação com a Configuração 2 em todas as dimensões avaliadas.
+O desempenho das duas configurações degrada progressivamente com o aumento da dimensão, o que era esperado devido à maior complexidade do problema.
+Destaca-se também o comportamento não linear das curvas, visualmente próxima a uma exponencial.
 
 ```{r}
 # Adicionar novas colunas ao DataFrame
@@ -196,6 +253,7 @@ results <- read.csv(csv_file)
 results <- adicionar_colunas(results)
 head(results)
 ```
+
 ```{r}
 ggplot(results, aes(x = Dimension)) +
   geom_line(aes(y = Mean_Result, color = "Média")) +
@@ -208,10 +266,12 @@ ggplot(results, aes(x = Dimension)) +
   theme_minimal()
 ```
 
-A análise do gráfico apresentado demonstra que a média dos resultados dos algoritmos aumenta proporcionalmente ao número de dimensões do problema, indicando uma dependência direta entre o desempenho do algoritmo e a complexidade dimensional da função otimizada. Essa relação reflete a escalabilidade dos algoritmos avaliados, já que o aumento da dimensão torna a tarefa de encontrar soluções ótimas mais desafiadora, elevando os valores médios da função objetivo.
+A análise do gráfico apresentado demonstra que a média dos resultados dos algoritmos aumenta proporcionalmente ao número de dimensões do problema, indicando uma dependência direta entre o desempenho do algoritmo e a complexidade dimensional da função otimizada.
+Essa relação reflete a escalabilidade dos algoritmos avaliados, já que o aumento da dimensão torna a tarefa de encontrar soluções ótimas mais desafiadora, elevando os valores médios da função objetivo.
 
-Para determinar qual algoritmo possui um desempenho superior, é essencial considerar a diferença entre as médias das configurações testadas. Apenas ao verificar essa diferença é possível avaliar de maneira conclusiva a eficácia relativa de cada algoritmo, pois a média reflete o desempenho médio em todos os testes realizados. Sem essa análise comparativa das médias, qualquer inferência sobre a superioridade de uma configuração seria inadequada e sujeita a vieses, ignorando o contexto da variabilidade dos resultados.
-
+Para determinar qual algoritmo possui um desempenho superior, é essencial considerar a diferença entre as médias das configurações testadas.
+Apenas ao verificar essa diferença é possível avaliar de maneira conclusiva a eficácia relativa de cada algoritmo, pois a média reflete o desempenho médio em todos os testes realizados.
+Sem essa análise comparativa das médias, qualquer inferência sobre a superioridade de uma configuração seria inadequada e sujeita a vieses, ignorando o contexto da variabilidade dos resultados.
 
 ```{r}
 ggplot(results, aes(x = Dimension)) +
@@ -226,21 +286,20 @@ ggplot(results, aes(x = Dimension)) +
   theme_minimal()
 ```
 
+A análise da evolução dos resíduos apresentados no gráfico revela diferenças consistentes entre as configurações ao longo das dimensões.
+Observa-se que os resíduos da Configuração 1 apresentam valores predominantemente negativos, enquanto os da Configuração 2 são majoritariamente positivos.
+Isso indica que, em média, a Configuração 1 obteve resultados melhores (mais próximos ao valor mínimo da função objetivo) em comparação com a Configuração 2.
 
-A análise da evolução dos resíduos apresentados no gráfico revela diferenças consistentes entre as configurações ao longo das dimensões. Observa-se que os resíduos da Configuração 1 apresentam valores predominantemente negativos, enquanto os da Configuração 2 são majoritariamente positivos. Isso indica que, em média, a Configuração 1 obteve resultados melhores (mais próximos ao valor mínimo da função objetivo) em comparação com a Configuração 2. 
+## Execução do Experimento
 
-
-## Cálculo do Tamanho Amostral
-```{r}
- pwr.t.test(d = 0.5, sig.level = 0.05, power = 0.8, type = "paired")
-
-```
-
-O cálculo do tamanho amostral indica que, para realizar um teste t pareado com uma diferença de efeito (d) de 0,5, um nível de significância de 5% (sig.level = 0,05) e um poder estatístico de 80% (power = 0,8), seriam necessárias 33,37 observações pareadas. Como o número de pares deve ser inteiro, é adequado arredondar para 34 pares. Esse resultado assegura que o teste t terá uma probabilidade de 80% de detectar um efeito de tamanho moderado (d = 0,5), caso ele exista, minimizando tanto o risco de erro tipo I (falso positivo) quanto o risco de erro tipo II (falso negativo).
-
-## Execução Paralela do Experimento
-
-Nesse momento é realizado os experimentos para as duas configurações do algoritmo de Evolução Diferencial (DE) para diferentes dimensões de problemas de otimização, armazenar os resultados em um arquivo CSV e paralelizar o processamento para maior eficiência. Inicialmente, ele verifica se o arquivo de resultados já existe; caso contrário, cria um novo arquivo e prepara um cabeçalho detalhado. Um cluster paralelo é configurado para processar múltiplas dimensões simultaneamente, realizando 30 execuções para cada configuração por dimensão. Os resultados são salvos incrementalmente no arquivo CSV, incluindo os valores individuais das execuções, as médias por configuração e a média geral. Dimensões que apresentarem erros durante o processamento são registradas para análise posterior. Este método eficiente garante a reprodutibilidade, escalabilidade e organização dos dados. 
+Nesse momento realizamos os experimentos para as duas configurações do algoritmo DE nas 34 dimensões sorteadas aleatoriamentede.
+Os resultados foram armazenados em um arquivo CSV.
+O processamento foi paralelizado para aumentar eficiência da execução do código.
+Inicialmente, o código verifica se o arquivo de resultados já existe; caso contrário, cria um novo arquivo e prepara um cabeçalho detalhado.
+Um cluster paralelo é configurado para processar múltiplas dimensões simultaneamente, realizando as execuções para cada configuração por dimensão.
+Os resultados são salvos incrementalmente no arquivo CSV, incluindo os valores individuais das execuções, as médias por configuração e a média geral.
+Dimensões que apresentarem erros durante o processamento são registradas para análise posterior.
+Este método eficiente garante a reprodutibilidade, escalabilidade e organização dos dados.
 
 ```{r}
 library(parallel)
@@ -359,8 +418,10 @@ if (length(error_dimensions) > 0) {
 
 ```
 
-
-Após a coleta dos dados, o código embaralha as linhas do DataFrame para eliminar possíveis padrões que possam enviesar a análise subsequente. Em seguida, ele ajusta os valores individuais das execuções para calcular os resíduos, subtraindo as médias geral e da configuração correspondente. Essa transformação é essencial para isolar as variações residuais e realizar análises estatísticas precisas, como testes de normalidade. Este procedimento permite comparar o desempenho entre configurações de forma mais robusta e alinhada com os pressupostos estatísticos necessários para análises posteriores.
+Após a coleta dos dados, o código embaralha as linhas do DataFrame para eliminar possíveis padrões que possam enviesar a análise subsequente.
+Em seguida, ele ajusta os valores individuais das execuções para calcular os resíduos, subtraindo as médias geral e da configuração correspondente.
+Essa transformação é essencial para isolar as variações residuais e realizar análises estatísticas precisas, como testes de normalidade.
+Este procedimento permite comparar o desempenho entre configurações de forma mais robusta e alinhada com os pressupostos estatísticos necessários para análises posteriores.
 
 ```{r}
 set.seed(123) # Garantir reprodutibilidade
@@ -407,6 +468,7 @@ names(residuals_df) <- residual_col_names
 head(residuals_df)
 
 ```
+
 ```{r}
 # Converter residuals_df para formato longo
 residuals_long <- residuals_df %>%
@@ -438,10 +500,65 @@ ggplot(residuals_long, aes(x = Dimension, y = Residual, color = Configuration_Ty
   theme(legend.position = "top")
 ```
 
-## Teste de premissa
+## Execução do Experimento (50 repetições)
 
+```{r}
+
+# Load data
+data <- read.csv("teste2.csv")
+
+# Aggregate data (algorithm means by instance group)
+aggdata <- with(data, aggregate(x = Result,
+                                by = list(Algorithm, Group),
+                                FUN = mean))
+
+# Rename columns and coerce factor variables
+names(aggdata) <- c("Algorithm", "Instance_Group", "Y")
+for (i in 1:2) aggdata[, i] <- as.factor(aggdata[, i])
+
+# Summary
+summary(aggdata)
+
+# Plot
+p <- ggplot(aggdata, aes(x = Instance_Group, y = log(Y),
+group = Algorithm, colour = Algorithm))
+
+p + geom_line(linetype=2) + geom_point(size=5)
+```
+
+```{r}
+model2 <- aov(log(Y)~Algorithm+Instance_Group, data=aggdata)
+summary(model2)
+summary.lm(model2)$r.squared
+par(mfrow = c(2, 2))
+plot(model2, pch = 20, las = 1)
+```
+
+```{r}
+
+library(tidyr)
+
+df_wide <- aggdata %>%
+  pivot_wider(names_from = Algorithm, values_from = Y)
+
+df_wide <- df_wide %>%
+  mutate(Diff_Percent = (`2` - `1`) / `1` * 100)
+
+# Summary
+summary(df_wide)
+
+# Plot
+p <- ggplot(df_wide, aes(x = Instance_Group, y = Diff_Percent))
+
+p + geom_line(linetype=2) + geom_point(size=5)
+
+
+```
+
+## Teste das Premissas
 
 ### Teste de Normalidade
+
 ```{r}
 # Carregar todos os resíduos
 residuals_matrix <- as.matrix(residuals_df)
@@ -466,11 +583,16 @@ shapiro_config2 <- shapiro.test(residuals_config2)
 cat("\nTeste de Normalidade - Resíduos Configuração 2:\n")
 print(shapiro_config2)
 ```
-Os resultados dos testes de normalidade indicam que, tanto para os resíduos combinados quanto para os resíduos separados por configuração, a hipótese nula do teste Shapiro-Wilk, que assume que os dados seguem uma distribuição normal, foi rejeitada (p-valor < 0.05). O valor da estatística W, próximo de 0.9 em todos os casos, reflete um desvio considerável em relação à normalidade. Esses resultados sugerem que os resíduos, tanto no conjunto total quanto em cada configuração (Configuração 1 e Configuração 2), não apresentam distribuição normal. Isso pode impactar a escolha de métodos estatísticos subsequentes, especialmente se estes assumirem normalidade nos dados, exigindo alternativas não paramétricas ou transformações nos resíduos para adequação.
+
+Os resultados dos testes de normalidade indicam que, tanto para os resíduos combinados quanto para os resíduos separados por configuração, a hipótese nula do teste Shapiro-Wilk, que assume que os dados seguem uma distribuição normal, foi rejeitada (p-valor \< 0.05).
+O valor da estatística W, próximo de 0.9 em todos os casos, reflete um desvio considerável em relação à normalidade.
+Esses resultados sugerem que os resíduos, tanto no conjunto total quanto em cada configuração (Configuração 1 e Configuração 2), não apresentam distribuição normal.
+Isso pode impactar a escolha de métodos estatísticos subsequentes, especialmente se estes assumirem normalidade nos dados, exigindo alternativas não paramétricas ou transformações nos resíduos para adequação.
 
 ### Teste de Independência
 
-Para aplicar o teste de independência, o código mencionado calcula uma matriz de correlação, que verifica o grau de relação linear entre os resíduos de diferentes colunas. A interpretação da matriz ajudará a entender se há independência (valores de correlação próximos de 0) ou dependência (valores próximos de -1 ou 1).
+Para aplicar o teste de independência, o código mencionado calcula uma matriz de correlação, que verifica o grau de relação linear entre os resíduos de diferentes colunas.
+A interpretação da matriz ajudará a entender se há independência (valores de correlação próximos de 0) ou dependência (valores próximos de -1 ou 1).
 
 ```{r}
 # Carregar os resíduos normalizados (se necessário)
@@ -483,7 +605,12 @@ matriz_correlacao <- cor(dados_normalizados, method = "pearson", use = "complete
 cat("\nResumo da Correlação:\n")
 summary(as.vector(matriz_correlacao))
 ```
-Os resultados da matriz de correlação indicam que os resíduos apresentam alta correlação linear entre si, com valores variando de 0,9583 a 1,0000. A mediana (0,9836) e a média (0,9830) reforçam a forte dependência linear entre as execuções analisadas. Esses resultados sugerem que os resíduos não são independentes, indicando possível interação entre os fatores analisados ou padrões sistemáticos nos dados que influenciam as diferentes execuções. Essa dependência deve ser considerada em análises subsequentes, especialmente se forem utilizados métodos que assumem independência dos resíduos, pois ela pode impactar a validade das conclusões estatísticas. Ajustes no modelo ou métodos específicos para tratar a dependência podem ser necessários.
+
+Os resultados da matriz de correlação indicam que os resíduos apresentam alta correlação linear entre si, com valores variando de 0,9583 a 1,0000.
+A mediana (0,9836) e a média (0,9830) reforçam a forte dependência linear entre as execuções analisadas.
+Esses resultados sugerem que os resíduos não são independentes, indicando possível interação entre os fatores analisados ou padrões sistemáticos nos dados que influenciam as diferentes execuções.
+Essa dependência deve ser considerada em análises subsequentes, especialmente se forem utilizados métodos que assumem independência dos resíduos, pois ela pode impactar a validade das conclusões estatísticas.
+Ajustes no modelo ou métodos específicos para tratar a dependência podem ser necessários.
 
 ### Teste de Homogeneidade de Variância:
 
@@ -500,31 +627,88 @@ dados_longo <- pivot_longer(
 
 leveneTest(Resíduo ~ Configuração, data = dados_longo)
 ```
-O Teste de Levene foi aplicado para verificar a homogeneidade de variâncias entre os grupos analisados, com o uso da mediana como medida de centralidade. O teste resultou em um valor de p-valor significativamente menor do que o nível de significância adotado de  α = 0,05. Dessa forma, rejeita-se a hipótese nula do teste (H₀), que afirma que as variâncias dos grupos são homogêneas. Isso indica que há diferenças significativas nas variâncias entre os grupos analisados.
 
-### Conclusão do Teste de premissa
+O Teste de Levene foi aplicado para verificar a homogeneidade de variâncias entre os grupos analisados, com o uso da mediana como medida de centralidade.
+O teste resultou em um valor de p-valor significativamente menor do que o nível de significância adotado de α = 0,05.
+Dessa forma, rejeita-se a hipótese nula do teste (H₀), que afirma que as variâncias dos grupos são homogêneas.
+Isso indica que há diferenças significativas nas variâncias entre os grupos analisados.
 
+### Analise do desvio padrão
 
-Os testes estatísticos realizados indicaram que os resíduos não seguem uma distribuição normal (Shapiro-Wilk com p-valor < 0,05), apresentam alta dependência linear (média e mediana das correlações próximas a 0,98), e não possuem homogeneidade de variâncias entre as configurações (Teste de Levene com p-valor < 0,001). Esses resultados invalidam o uso do ANOVA tradicional, que assume normalidade, independência e homogeneidade de variâncias. Como alternativa, recomenda-se o uso de métodos não paramétricos, como o Teste de Wilcoxon para comparações pareadas entre as configurações ou o Teste de Kruskal-Wallis para múltiplos grupos.
+```{r}
+# Inicializar lista para armazenar resultados de cada dimensão
+dimensoes <- unique(results$Dimension)
 
+# Parâmetros para cálculo do tamanho da amostra
+z_alpha <- 1.96  # Valor crítico para 95% de confiança
+margem_erro <- 5  # Margem de erro relativa desejada em %
 
-## Teste não paramétricos 
-Para determinar qual das duas configurações (Config1 e Config2) apresenta melhor desempenho em todos os cenários, optamos pelo Teste de Permutação. Esse método foi escolhido devido às características dos dados, que não atendem às premissas de normalidade e homogeneidade de variâncias, conforme verificado nos testes preliminares (Shapiro-Wilk e Levene). O Teste de Permutação é robusto, não exige suposições rígidas sobre a distribuição dos dados e permite a comparação direta das médias entre as configurações. Ele utiliza reamostragens para construir uma distribuição empírica da estatística de teste, fornecendo uma análise confiável para identificar se as diferenças observadas entre as configurações são estatisticamente significativas.
+# Loop para calcular desvios padrão, CV e tamanho da amostra
+for (dim in dimensoes) {
+  dim <- as.numeric(dim)  # Garantir que dim é numérico
+  
+  # Filtrar linhas correspondentes à dimensão atual
+  linhas_dim <- results[results$Dimension == dim, ]
+  mean_general <- linhas_dim$Mean_General[1] 
+  
+  # Extrair resíduos para Config1 e Config2
+  config1_cols <- grep("Config1_Run_", colnames(linhas_dim), value = TRUE)
+  config2_cols <- grep("Config2_Run_", colnames(linhas_dim), value = TRUE)
+  
+  config1 <- as.vector(as.matrix(linhas_dim[, config1_cols])) 
+  config2 <- as.vector(as.matrix(linhas_dim[, config2_cols]))
+  
+    # Desvio padrão populacional para config1 e config2
+  resumo_config1 <- summary(config1)
+  resumo_config2 <- summary(config2)
+  
+  # Desvio padrão populacional para config1 e config2
+  desvio_padrao_config1  <- (resumo_config1["Max."] - resumo_config1["Min."]) / 6
+  desvio_padrao_config2  <- (resumo_config2["Max."] - resumo_config2["Min."]) / 6
+  
+    # Calcular Coeficiente de Variação (CV)
+  cv_config1 <- (desvio_padrao_config1 / abs(mean(config1))) * 100
+  cv_config2 <- (desvio_padrao_config2 / abs(mean(config2))) * 100
+  
+    # Calcular tamanho da amostra necessário usando CV
+  n_config1 <- ceiling((z_alpha * cv_config1 / margem_erro)^2)
+  n_config2 <- ceiling((z_alpha * cv_config2 / margem_erro)^2)
+  
+  # Adicionar resultados à tabela
+  cat(sprintf("Dimensão: %d\n", dim))
+  cat(sprintf("CV_Config1: %.2f%%, TamanhoAmostra_Config1: %d\n", cv_config1, n_config1))
+  cat(sprintf("CV_Config2: %.2f%%, TamanhoAmostra_Config2: %d\n", cv_config2, n_config2))
+  cat("----------------------------------------------------\n")
+}
+
+```
+
+### Conclusão dos Teste das Premissas
+
+Os testes estatísticos realizados indicaram que os resíduos não seguem uma distribuição normal (Shapiro-Wilk com p-valor \< 0,05), apresentam alta dependência linear (média e mediana das correlações próximas a 0,98), e não possuem homogeneidade de variâncias entre as configurações (Teste de Levene com p-valor \< 0,001).
+Esses resultados invalidam o uso do ANOVA tradicional, que assume normalidade, independência e homogeneidade de variâncias.
+Como alternativa, recomenda-se o uso de métodos não paramétricos, como o Teste de Wilcoxon para comparações pareadas entre as configurações ou o Teste de Kruskal-Wallis para múltiplos grupos.
+
+## Teste Não Paramétricos
+
+Para determinar qual das duas configurações (Config1 e Config2) apresenta melhor desempenho em todos os cenários, optamos pelo Teste de Permutação.
+Esse método foi escolhido devido às características dos dados, que não atendem às premissas de normalidade e homogeneidade de variâncias, conforme verificado nos testes preliminares (Shapiro-Wilk e Levene).
+O Teste de Permutação é robusto, não exige suposições rígidas sobre a distribuição dos dados e permite a comparação direta das médias entre as configurações.
+Ele utiliza reamostragens para construir uma distribuição empírica da estatística de teste, fornecendo uma análise confiável para identificar se as diferenças observadas entre as configurações são estatisticamente significativas.
 
 ### Formulação do Teste de Hipótese
 
-A comparação entre as configurações será feita utilizando a  diferença média  entre os resíduos como estatística de interesse. As hipóteses são formuladas da seguinte maneira:
+A comparação entre as configurações será feita utilizando a diferença média entre os resíduos como estatística de interesse.
+As hipóteses são formuladas da seguinte maneira:
 
--  Hipótese Nula (H0) : Não há diferença significativa entre as médias das duas configurações.
-  \[
-  H_0: \mu_{\text{Config1}} = \mu_{\text{Config2}}
-  \]
--  Hipótese Alternativa (H1) : Há uma diferença significativa entre as médias das duas configurações.
-  \[
-  H_1: \mu_{\text{Config1}} \neq \mu_{\text{Config2}}
-  \]
+-   Hipótese Nula (H0) : Não há diferença significativa entre as médias das duas configurações. $$
+      H_0: \mu_{\text{Config1}} = \mu_{\text{Config2}}
+      $$
+-   Hipótese Alternativa (H1) : Há uma diferença significativa entre as médias das duas configurações. $$
+      H_1: \mu_{\text{Config1}} \neq \mu_{\text{Config2}}
+      $$
 
-A análise será realizada utilizando  nível de significância  \(\alpha = 0.05\), garantindo que a probabilidade de um erro tipo I (rejeitar H0 quando verdadeira) não ultrapasse 5%.
+A análise será realizada utilizando nível de significância $\alpha = 0.05$, garantindo que a probabilidade de um erro tipo I (rejeitar H0 quando verdadeira) não ultrapasse 5%.
 
 ### Teste de Hipótese
 
@@ -577,10 +761,10 @@ resultados_dimensao$p_value <- formatC(as.numeric(resultados_dimensao$p_value), 
 print(resultados_dimensao)
 ```
 
-Os resultados obtidos a partir do  Teste de Permutação  evidenciam diferenças estatisticamente significativas entre as configurações  Config1  e  Config2  em todas as dimensões analisadas. Com p-valores extremamente baixos, próximos de \(9.9999 \times 10^{-6}\), para todas as dimensões testadas  é possível rejeitar a  Hipótese Nula (\(H_0\))  com alto grau de confiança (\(\alpha = 0.05\)). Esses valores indicam que as diferenças observadas entre as médias das duas configurações não são atribuíveis ao acaso e, portanto, apontam um  desempenho significativamente distinto  entre Config1 e Config2. Isso reforça a robustez do método aplicado e a confiabilidade dos resultados obtidos.
-
-
-
+Os resultados obtidos a partir do Teste de Permutação evidenciam diferenças estatisticamente significativas entre as configurações Config1 e Config2 em todas as dimensões analisadas.
+Com p-valores extremamente baixos, próximos de $9.9999 \times 10^{-6}$, para todas as dimensões testadas é possível rejeitar a Hipótese Nula ($H_0$) com alto grau de confiança ($\alpha = 0.05$).
+Esses valores indicam que as diferenças observadas entre as médias das duas configurações não são atribuíveis ao acaso e, portanto, apontam um desempenho significativamente distinto entre Config1 e Config2.
+Isso reforça a robustez do método aplicado e a confiabilidade dos resultados obtidos.
 
 ```{r}
 # Combinar resíduos de todas as dimensões para Config1 e Config2
@@ -614,8 +798,10 @@ cat("P-valor (global):", p_value_global, "\n")
 
 ```
 
-Com base nos resultados do  Teste de Permutação Global , a  diferença média observada  de  -1.706.261  indica que os tempos da  Config2  foram significativamente maiores do que os da  Config1 . Como o desempenho é avaliado pelo tempo e  quanto maior o tempo, pior a solução , conclui-se que a  Config2  apresentou um desempenho  muito inferior  em relação à  Config1 . O p-valor extremamente baixo ( 9.9999 × 10⁻⁶ ) reforça que essa diferença não é fruto do acaso, sendo estatisticamente significativa. Assim, a  Config1  se destaca como a melhor solução, apresentando tempos menores e, consequentemente, maior eficiência em comparação à  Config2 .
-
+Com base nos resultados do Teste de Permutação Global , a diferença média observada de -1.706.261 indica que os tempos da Config2 foram significativamente maiores do que os da Config1 .
+Como o desempenho é avaliado pelo tempo e quanto maior o tempo, pior a solução , conclui-se que a Config2 apresentou um desempenho muito inferior em relação à Config1 .
+O p-valor extremamente baixo ( 9.9999 × 10⁻⁶ ) reforça que essa diferença não é fruto do acaso, sendo estatisticamente significativa.
+Assim, a Config1 se destaca como a melhor solução, apresentando tempos menores e, consequentemente, maior eficiência em comparação à Config2 .
 
 ```{r}
 # Dados de exemplo: ajuste para usar seus próprios dados
@@ -640,7 +826,12 @@ ggplot(data_visual, aes(x = Configuração, y = Tempo, fill = Configuração)) +
   theme(text = element_text(size = 12))
 
 ```
-O gráfico de caixas apresenta uma comparação visual dos tempos entre as configurações Config1 e Config2. Observa-se que a Config1 possui uma mediana significativamente menor, além de uma distribuição mais concentrada abaixo do eixo zero, indicando tempos menores e mais consistentes. Em contraste, a Config2 apresenta valores de tempo consideravelmente mais elevados e maior dispersão, evidenciando um desempenho inferior. A presença de outliers na Config1 sugere alguns valores atípicos, porém eles não comprometem a tendência geral. Assim, a análise confirma que a Config1 supera a Config2, apresentando tempos menores e, consequentemente, melhor desempenho.
+
+O gráfico de caixas apresenta uma comparação visual dos tempos entre as configurações Config1 e Config2.
+Observa-se que a Config1 possui uma mediana significativamente menor, além de uma distribuição mais concentrada abaixo do eixo zero, indicando tempos menores e mais consistentes.
+Em contraste, a Config2 apresenta valores de tempo consideravelmente mais elevados e maior dispersão, evidenciando um desempenho inferior.
+A presença de outliers na Config1 sugere alguns valores atípicos, porém eles não comprometem a tendência geral.
+Assim, a análise confirma que a Config1 supera a Config2, apresentando tempos menores e, consequentemente, melhor desempenho.
 
 ### Teste de Wilcoxon
 
@@ -653,4 +844,13 @@ print(wilcox_result)
 
 ```
 
-O resultado do  Teste de Wilcoxon com correção de continuidade  reforça as conclusões obtidas anteriormente. Com um  p-valor extremamente baixo  (p < 2.2 × 10⁻¹⁶), rejeita-se a  Hipótese Nula (\(H_0\))  de que não há diferença significativa entre as configurações. A hipótese alternativa, que indica que os tempos da  Config1  são  significativamente menores  do que os da  Config2 , é corroborada. O valor da estatística \(V = 264\) e o resultado do teste confirmam que a  Config1  apresenta desempenho  superior , com tempos mais baixos, enquanto a  Config2  demonstra desempenho inferior, validando as análises anteriores de maneira robusta.
+O resultado do Teste de Wilcoxon com correção de continuidade reforça as conclusões obtidas anteriormente.
+Com um p-valor extremamente baixo (p \< 2.2 × 10⁻¹⁶), rejeita-se a Hipótese Nula ($H_0$) de que não há diferença significativa entre as configurações.
+A hipótese alternativa, que indica que os tempos da Config1 são significativamente menores do que os da Config2 , é corroborada.
+O valor da estatística $V = 264$ e o resultado do teste confirmam que a Config1 apresenta desempenho superior , com tempos mais baixos, enquanto a Config2 demonstra desempenho inferior, validando as análises anteriores de maneira robusta.
+
+# Referências
+
+[1] Campelo, F., Takahashi, F. Sample size estimation for power and accuracy in the experimental comparison of algorithms. 
+*J Heuristics* **25**, 305–338 (2019).
+<https://doi.org/10.1007/s10732-018-9396-7>.
