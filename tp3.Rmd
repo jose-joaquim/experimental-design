@@ -10,6 +10,7 @@ output:
 editor_options:
   markdown:
     wrap: sentence
+bibliography: tp3.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -43,7 +44,7 @@ Inicialmente definida para duas dimensões, possui variantes que a permite ser a
 ### O algoritmo *Differential Evolution*
 
 De acordo com a taxonomia utilizada no livro-texto de X [], o DE é uma meta-heurística evolucionária, originalmente desenvolvida para a resolução de problemas de otimização em espaço de buscas contínuo.
-Algoritmos classificados como _evolucionários  otimizam um dado problema combinatório através da manutenção das chamadas populações.
+Algoritmos classificados como _evolucionários_ otimizam um dado problema combinatório através da manutenção das chamadas populações.
 Uma população é um conjunto de invíduos - soluções para o problema que está sendo otimizado - que podem ser gerados aleatoriamente e em seguida são constantemente modificados com a utilização de operadores especificados nos parâmetros de entrada do algoritmo.
 Nesse estudo de caso, focamos nos operadores de mutação (aqueles que modificam - ou perturbam - um indivíduo) e de recombinação (aqueles que selecionam um subconjunto de invidíduos para gerar um descendente).
 
@@ -53,8 +54,8 @@ Já para a **Configuração 2**, temos a mutação com $f=3$ e recombinação do
 
 # Planejamento do Experimento
 
-Visando uma maior fundamentação das conclusões extraídas desse estudo de caso acerca da melhor configuração do DE, optamos pela realização de um experimento estatístico baseado em _blocagem_, detalhada no livro-texto [Livro do Montgomerey].
-Além disso, nosso experimento também é baseado nos _guidelines  apresentados no _paper  de Campelo e Takahashi [X].
+Visando uma maior fundamentação das conclusões extraídas desse estudo de caso acerca da melhor configuração do DE, optamos pela realização de um experimento estatístico baseado em _blocagem_, detalhada no livro-texto [@Montgomery2010] da disciplina.
+Além disso, nosso experimento também é baseado nos _guidelines_ apresentados no _paper_ de @Campelo2019.
 A seguir, apresentamos a metodologia utilizada no experimento realizado nesse estudo de caso.
 
 ## Teste de Hipótese
@@ -103,7 +104,6 @@ intervalo <- 2:150
 N = 34
 set.seed(123) # para garantir reproducibilidade
 instancias <- sort(sample(intervalo, size = N, replace = FALSE), decreasing = FALSE)
-print(dim_range)
 ```
 
 A incerteza associada a $\overline{X}_{ij}$ devido ao número finito de observações $n_{ij}$ afeta diretamente a estimação de $\phi_j$, que por sua vez influencia no poder do teste estatístico sobre $\mu_D$.
@@ -654,7 +654,7 @@ Os testes estatísticos realizados indicaram que os resíduos não seguem uma di
 Esses resultados invalidam todas as premissas do ANOVA tradicional, não fornecendo fundamentação estatística para as conclusões extraídas acerca da performance das duas configurações da meta-heurística DE ao problema de otimização de funções Rosenbrock.
 
 Seguiremos, portanto, com os chamados **Testes Não-Paramétricos**.
-É importante ressaltar que tais testes são comumente utilizados em estudos estatísticos de algoritmos evolucionários [Y], pois, como presenciamos até aqui no presente estudo de caso, tais algoritmos não costumam apresentar resultados com distribuições bem comportadas.
+É importante ressaltar que tais testes são comumente utilizados em estudos estatísticos de algoritmos evolucionários [@Derrac2011], pois, como presenciamos até aqui no presente estudo de caso, tais algoritmos não costumam apresentar resultados com distribuições bem comportadas.
 
 ## Teste Não Paramétricos
 
