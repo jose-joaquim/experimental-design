@@ -681,7 +681,13 @@ if (shapiro_result$p.value > 0.05) {
 }
 print(t_test_result)
 ```
-O teste de normalidade de Shapiro-Wilk apresentou um valor de $ W = 0.78334$ e $ p \text{-value} = 1.24 \times 10^{-5} $, indicando que a hipótese nula de normalidade dos dados deve ser rejeitada. Isso significa que a distribuição das diferenças entre as médias das configurações não segue uma distribuição normal. Diante disso, foi utilizado o teste não paramétrico de Wilcoxon para comparar a mediana das diferenças com zero. O teste de Wilcoxon revelou um valor de $ V = 0 $ e $ p \text{-value} = 5.821 \times 10^{-11} $, rejeitando a hipótese nula de que a mediana das diferenças é igual a zero. Esses resultados confirmam, com alta confiabilidade, que as diferenças são consistentemente menores que zero, reforçando que a Configuração 2 supera a Configuração 1 ao longo de todas as dimensões analisadas.
+
+
+O teste de normalidade de Shapiro-Wilk apresentou um valor de $W = 0.78334$ e $p-value = 1.24 \times 10^{-5}$, indicando que a hipótese nula de normalidade dos dados deve ser rejeitada.
+Isso significa que a distribuição das diferenças entre as médias das configurações não segue uma distribuição normal.
+Diante disso, foi utilizado o teste não paramétrico de Wilcoxon para comparar a mediana das diferenças com zero.
+O teste de Wilcoxon revelou um valor de $V = 0$ e $p-value = 5.821 \times 10^{-11}$, rejeitando a hipótese nula de que a mediana das diferenças é igual a zero.
+Esses resultados confirmam, com alta confiabilidade, que as diferenças são consistentemente menores que zero, reforçando que a Configuração 2 supera a Configuração 1 ao longo de todas as dimensões analisadas.
 
 
 
