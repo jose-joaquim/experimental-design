@@ -35,13 +35,13 @@ Nesse estudo de caso, queremos avaliar qual é a melhor configuração na busca 
 Dessa forma, quanto menor o valor alcançado, melhor o resultado.
 Ao fim desse estudo de caso, esperamos contribuir para com a compreensão das implicações práticas das escolhas de recombinação e mutação no algoritmo DE, considerando a **escalabilidade** em problemas de otimização.
 
-### A função de Rosenbrock
+## A função de Rosenbrock
 
 A função de Rosenbrock é uma função não-convexa e monomodal que é comumente utilizada para testar o desempenho de algortimos de otimização.
 Ela se caracteriza por possuir um mínimo global em um vale plano, longo e estreito que o torna de difícil convergência.
 Inicialmente definida para duas dimensões, possui variantes que a permite ser avaliada em dimensões maiores, tornando o problema de otimização muito mais complexo.
 
-### O algoritmo *Differential Evolution*
+## O algoritmo *Differential Evolution*
 
 De acordo com a taxonomia utilizada no livro-texto de @Coello2007, o DE é uma meta-heurística evolucionária, originalmente desenvolvida para a resolução de problemas de otimização em espaço de buscas contínuo.
 Algoritmos classificados como _evolucionários_ otimizam um dado problema combinatório através da manutenção das chamadas populações.
@@ -52,11 +52,10 @@ As duas configurações do DE testadas neste estudo de caso diferenciam-se entre
 Na **Configuração 1**, é utilizado um operador de mutação do tipo aleatório com fator de escala $f=4.5$, enquanto que a recombinação é do tipo LBGA (_Linear Breeder Genetic Algorithm_).
 Já para a **Configuração 2**, temos a mutação com $f=3$ e recombinação do tipo BLX (_Blend Alpha Beta_).
 
+
 # Planejamento do Experimento
 
-Visando uma maior fundamentação das conclusões extraídas desse estudo de caso acerca da melhor configuração do DE, optamos pela realização de um experimento estatístico baseado em _blocagem_, detalhada no livro-texto [@Montgomery2010] da disciplina.
-Além disso, nosso experimento também é baseado nos _guidelines_ apresentados no _paper_ de @Campelo2019.
-A seguir, apresentamos a metodologia utilizada no experimento realizado nesse estudo de caso.
+Visando uma maior fundamentação das conclusões extraídas desse estudo de caso acerca da melhor configuração do DE, optamos pela realização de um experimento estatístico baseado em _blocagem_, detalhada no livro-texto [@Montgomery2010] da disciplina. Além disso, nosso experimento também é baseado nos _guidelines_ apresentados no _paper_ de @Campelo2019. A seguir, apresentamos a metodologia utilizada no experimento realizado nesse estudo de caso.
 
 ## Teste de Hipótese
 
@@ -111,15 +110,14 @@ Deseja-se então obter o número de repetições $n_{ij}$ tal que a sua variânc
 
 É importante ressaltarmos que, uma vez que não temos conhecimento prévio sobre a distribuição de probabilidade de $x_{ij}$, decidimos por fazer $n_{ij} = 30$, ou seja, rodar cada algoritmo 30 vezes em cada uma das 34 instâncias.
 
-## Coleta dos Dados
+
+# Coleta dos Dados
 
 Apesar de termos definido a quantidade de instâncias ($N=34$) e o número de repetições ($n_{ij} = 30$), decidimos fazer uma varredura exploratória da performance dos dois algoritmos em todas as dimensões do intervalo $[2,150]$, fazendo apenas uma repetição ($n_{ij} = 1$).
 Isso nos deu uma primeira impressão sobre como é o comportamento da performance com o aumento da dimensão.
 
 Após essa primeira análise, o experimento completo foi executado e os dados, necessários para a análise estatística, coletados e guardados em arquivos CSV.
 Para reduzir o tempo total de execução do experimento, que alcança várias horas, principalmente por causa das dimensões maiores, optamos por usar uma extratégia de processamento paralelo.
-
-# Resultados
 
 ## Análise Exploratória
 
@@ -301,6 +299,7 @@ A análise da evolução dos resíduos apresentados no gráfico revela diferenç
 Observa-se que os resíduos da Configuração 1 apresentam valores predominantemente negativos, enquanto os da Configuração 2 são majoritariamente positivos.
 Isso indica que, em média, a Configuração 1 obteve resultados melhores (mais próximos ao valor mínimo da função objetivo) em comparação com a Configuração 2.
 
+
 ## Execução do Experimento
 
 Nesse momento realizamos os experimentos para as duas configurações do algoritmo DE nas 34 dimensões sorteadas aleatoriamentede.
@@ -442,7 +441,7 @@ head(results_shuffled)
 
 ```{r}
 # Remover as três últimas colunas
-results_individual <- results_shuffled[, -which(names(results_shuffled) %in% c("Mean_Config1", "Mean_Config2", "Mean_General"))]
+results_individual <- results_shuffled[ -which(names(results_shuffled) %in% c("Mean_Config1", "Mean_Config2", "Mean_General"))]
 
 # Calcular resíduos
 calcular_residuos <- function(row) {
@@ -474,6 +473,9 @@ residual_col_names <- c(
 # Converter para DataFrame com os novos nomes de colunas
 residuals_df <- as.data.frame(residuals_matrix)
 names(residuals_df) <- residual_col_names
+
+# Adicionar a coluna "Dimension" no DataFrame final
+residuals_df <- cbind(Dimension = results_shuffled$Dimension, residuals_df)
 
 # Verificar a estrutura do DataFrame de resíduos
 head(residuals_df)
@@ -601,120 +603,8 @@ Esses resultados invalidam todas as premissas do ANOVA tradicional, não fornece
 Seguiremos, portanto, com os chamados **Testes Não-Paramétricos**.
 É importante ressaltar que tais testes são comumente utilizados em estudos estatísticos de algoritmos evolucionários [@Derrac2011], pois, como presenciamos até aqui no presente estudo de caso, tais algoritmos não costumam apresentar resultados com distribuições bem comportadas.
 
-## Teste Não Paramétricos
 
-Para determinar qual das duas configurações (Config1 e Config2) apresenta melhor desempenho em todos os cenários, optamos pelo Teste de Permutação.
-Esse método foi escolhido devido às características dos dados, que não atendem às premissas de normalidade e homogeneidade de variâncias, conforme verificado nos testes de Shapiro-Wilk e Levene, respectivamente.
-O Teste de Permutação é robusto, não exige suposições rígidas sobre a distribuição dos dados e permite a comparação direta das médias entre as configurações.
-Ele utiliza reamostragens para construir uma distribuição empírica da estatística de teste, fornecendo uma análise confiável para identificar se as diferenças observadas entre as configurações são estatisticamente significativas.
-
-### Formulação do Teste de Hipótese
-
-A comparação entre as configurações será feita utilizando a diferença média entre os resíduos como estatística de interesse.
-As hipóteses são formuladas da seguinte maneira:
-
--   Hipótese Nula (H0) : Não há diferença significativa entre as médias das duas configurações. $$
-      H_0: \mu_{\text{Config1}} = \mu_{\text{Config2}}
-      $$
--   Hipótese Alternativa (H1) : Há uma diferença significativa entre as médias das duas configurações. $$
-      H_1: \mu_{\text{Config1}} \neq \mu_{\text{Config2}}
-      $$
-
-A análise será realizada utilizando nível de significância $\alpha = 0.05$, garantindo que a probabilidade de um erro tipo I (rejeitar $H_0$ quando verdadeira) não ultrapasse $5\%$.
-
-### Teste de Hipótese
-
-```{r}
-# Inicializar lista para armazenar resultados de cada dimensão
-dimensoes <- unique(results_shuffled$Dimension) # Obter valores únicos de dimensão
-n_perm <- 100000  # Número de permutações
-resultados_dimensao <- data.frame(Dimensao = integer(), p_value = numeric())
-
-# Loop para realizar o Teste de Permutação em cada dimensão
-for (dim in dimensoes) {
-  dim <- as.numeric(dim)  # Garantir que dim é numérico
-  
-  # Filtrar linhas correspondentes à dimensão atual
-  linhas_dim <- results_shuffled[results_shuffled$Dimension == dim, ]
-  
-  # Verificar se a coluna "Mean_General" existe e extrair sua média
-  mean_general <- linhas_dim$Mean_General[1] 
-  
-  # Extrair resíduos para Config1 e Config2 e subtrair a média global
-  config1_cols <- grep("Config1_Run_", colnames(linhas_dim), value = TRUE)
-  config2_cols <- grep("Config2_Run_", colnames(linhas_dim), value = TRUE)
-  
-  config1 <- as.vector(as.matrix(linhas_dim[, config1_cols])) - mean_general
-  config2 <- as.vector(as.matrix(linhas_dim[, config2_cols])) - mean_general  
-  
-  t_hat <- mean(config1) - mean(config2)
-  combined_data <- append(config1, config2)
-  n1 <- length(config1)
-  n2 <- length(config2)
-  t_perm <- numeric(n_perm)
-  
-  # Realizar Teste de Permutação
-  set.seed(123 + dim)  # Reprodutibilidade
-  for (i in 1:n_perm) {
-      S_perm <- sample(combined_data)  # Embaralhar os dados
-      X_perm <- S_perm[1:n1]  # Novos valores para config1
-      Y_perm <- S_perm[(n1 + 1):(n1 + n2)]  # Novos valores para config2
-      t_perm[i] <- mean(X_perm) - mean(Y_perm)
-  }
-    
-  # Calcular p-valor (H1: mu_config1 > mu_config2)
-  p_value <- (1 + sum(abs(t_perm) >= abs(t_hat))) / (1 + n_perm)  
-  resultados_dimensao <- rbind(resultados_dimensao, data.frame(Dimensao = dim, p_value = p_value))
- 
-}
-resultados_dimensao$p_value <- formatC(as.numeric(resultados_dimensao$p_value), format = "e", digits = 10)
-
-# Imprimir resultados
-print(resultados_dimensao)
-```
-
-Os resultados obtidos a partir do Teste de Permutação evidenciam diferenças estatisticamente significativas entre as configurações Config1 e Config2 em todas as dimensões analisadas.
-Com p-valores extremamente baixos, próximos de $9.9999 \times 10^{-6}$, para todas as dimensões testadas é possível rejeitar a Hipótese Nula ($H_0$) com alto grau de confiança ($\alpha = 0.05$).
-Esses valores indicam que as diferenças observadas entre as médias das duas configurações não são atribuíveis ao acaso e, portanto, apontam um desempenho significativamente distinto entre Config1 e Config2.
-Isso reforça a robustez do método aplicado e a confiabilidade dos resultados obtidos.
-
-```{r}
-# Combinar resíduos de todas as dimensões para Config1 e Config2
-config1_global <- as.vector(as.matrix(residuals_df[, grep("Residual_Config1", colnames(residuals_df))]))
-config2_global <- as.vector(as.matrix(residuals_df[, grep("Residual_Config2", colnames(residuals_df))]))
-
-# Calcular a diferença média observada global
-obs_diff_global <- mean(config1_global) - mean(config2_global)
-
-# Combinar todos os dados em um único vetor para permutação
-combined_data_global <- c(config1_global, config2_global)
-n_config1_global <- length(config1_global)
-n_perm <- 100000  # Número de permutações
-perm_diffs_global <- numeric(n_perm)  # Inicializar vetor para armazenar permutações
-
-# Realizar Teste de Permutação Global
-set.seed(999)  # Garantir reprodutibilidade
-for (i in 1:n_perm) {
-  shuffled_data <- sample(combined_data_global)  # Embaralhar os dados
-  perm_config1 <- shuffled_data[1:n_config1_global]  # Nova amostra Config1
-  perm_config2 <- shuffled_data[(n_config1_global + 1):length(shuffled_data)]  # Nova amostra Config2
-  perm_diffs_global[i] <- mean(perm_config1) - mean(perm_config2)  # Estatística de permutação
-}
-
-
-p_value_global <- (1 + sum(abs(perm_diffs_global) >= abs(obs_diff_global))) / (1 + n_perm) 
-# Exibir resultados globais
-cat("### Teste de Permutação Global ###\n")
-cat("Diferença média observada (global):", obs_diff_global, "\n")
-cat("P-valor (global):", p_value_global, "\n")
-
-```
-
-Com base nos resultados do Teste de Permutação Global, a diferença média observada de $-1,706,261$ indica que os tempos da Config2 foram significativamente maiores do que os da Config1.
-Como o desempenho é avaliado pelo tempo e quanto maior o tempo, pior a solução , conclui-se que a Config2 apresentou um desempenho muito inferior em relação à Config1.
-O p-valor extremamente baixo ( $9.9999 \times 10^{-6}$ ) reforça que essa diferença não é fruto do acaso, sendo estatisticamente significativa.
-Assim, a Config1 se destaca como a melhor solução, apresentando tempos menores e, consequentemente, maior eficiência em comparação à Config2.
-
+## Analise preliminar
 ```{r}
 # Dados de exemplo: ajuste para usar seus próprios dados
 config1_times <- as.vector(as.matrix(residuals_df[, grep("Residual_Config1", colnames(residuals_df))]))
@@ -743,23 +633,57 @@ O gráfico de caixas apresenta uma comparação visual dos tempos entre as confi
 Observa-se que a Config1 possui uma mediana significativamente menor, além de uma distribuição mais concentrada abaixo do eixo zero, indicando tempos menores e mais consistentes.
 Em contraste, a Config2 apresenta valores de tempo consideravelmente mais elevados e maior dispersão, evidenciando um desempenho inferior.
 A presença de outliers na Config1 sugere alguns valores atípicos, porém eles não comprometem a tendência geral.
-Assim, a análise confirma que a Config1 supera a Config2, apresentando tempos menores e, consequentemente, melhor desempenho.
+Assim, a análise sugere que a Config1 supera a Config2, apresentando tempos menores e, consequentemente, melhor desempenho.
 
-### Teste de Wilcoxon
+
+# Teste Não Paramétricos
+Para determinar qual das duas configurações (Config1 e Config2) apresenta melhor desempenho em todos os cenários, optamos pelo Teste de Permutação.
+Esse método foi escolhido devido às características dos dados, que não atendem às premissas de normalidade e homogeneidade de variâncias, conforme verificado nos testes de Shapiro-Wilk e Levene, respectivamente.
+O Teste de Permutação é robusto, não exige suposições rígidas sobre a distribuição dos dados e permite a comparação direta das médias entre as configurações.
+Ele utiliza reamostragens para construir uma distribuição empírica da estatística de teste, fornecendo uma análise confiável para identificar se as diferenças observadas entre as configurações são estatisticamente significativas.
+
+## Análise da Diferença das Médias entre Configurações ao Longo das Dimensões
 
 ```{r}
-# Teste de Wilcoxon
-wilcox_result <- wilcox.test(config1_global, config2_global, paired = TRUE, alternative = "less")
+# Calcular a diferença entre as médias das configurações diretamente no conjunto inicial
+results_difs <- results_shuffled %>%
+  mutate(Difference = Mean_Config1 - Mean_Config2)
 
-# Exibir resultado
-print(wilcox_result)
-
+ggplot(results_difs, aes(x = Dimension, y = Difference)) +
+  geom_line(color = "blue", alpha = 0.7, size = 1) + # Linha interpolada entre os pontos
+  geom_point(color = "red", alpha = 0.8, size = 2) + # Pontos para as dimensões específicas
+  labs(
+    title = "Diferença entre as Médias das Configurações ao Longo das Dimensões",
+    x = "Dimensão",
+    y = "Diferença (Configuração 1 - Configuração 2)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5)
+  )
 ```
+O gráfico demonstra que a diferença entre os resultados das Configurações 1 e 2 ao longo do número de dimensões é sempre menor ou igual a zero. Isso indica que, em todos os cenários avaliados, a Configuração 2 apresentou médias iguais ou superiores às da Configuração 1, sem ocorrência de valores positivos na diferença.
 
-O resultado do Teste de Wilcoxon com correção de continuidade reforça as conclusões obtidas anteriormente.
-Com um p-valor extremamente baixo ($\leq 2.2 \times 10^{-16}$), rejeita-se a Hipótese Nula ($H_0$) de que não há diferença significativa entre as configurações.
-A hipótese alternativa, que indica que os tempos da Config1 são significativamente menores do que os da Config2 , é corroborada.
-O valor da estatística $V = 264$ e o resultado do teste confirmam que a Config1 apresenta desempenho superior , com tempos mais baixos, enquanto a Config2 demonstra desempenho inferior, validando as análises anteriores de maneira robusta.
+## Teste de Wilcoxon
+
+```{r}
+shapiro_result <- shapiro.test(results_difs$Difference)
+print(shapiro_result)
+
+# Teste de hipótese para a média (t-test)
+if (shapiro_result$p.value > 0.05) {
+  # Se normalidade for confirmada
+  t_test_result <- t.test(results_difs$Difference, mu = 0, alternative = "less")
+} else {
+  # Se não for normal
+  t_test_result <- wilcox.test(results_difs$Difference, mu = 0, alternative = "less")
+}
+print(t_test_result)
+```
+O teste de normalidade de Shapiro-Wilk apresentou um valor de $ W = 0.78334$ e $ p \text{-value} = 1.24 \times 10^{-5} $, indicando que a hipótese nula de normalidade dos dados deve ser rejeitada. Isso significa que a distribuição das diferenças entre as médias das configurações não segue uma distribuição normal. Diante disso, foi utilizado o teste não paramétrico de Wilcoxon para comparar a mediana das diferenças com zero. O teste de Wilcoxon revelou um valor de $ V = 0 $ e $ p \text{-value} = 5.821 \times 10^{-11} $, rejeitando a hipótese nula de que a mediana das diferenças é igual a zero. Esses resultados confirmam, com alta confiabilidade, que as diferenças são consistentemente menores que zero, reforçando que a Configuração 2 supera a Configuração 1 ao longo de todas as dimensões analisadas.
+
+
 
 # Conclusões
 
